@@ -1,5 +1,7 @@
 # SnackAttack
 
+> Status: early development — scaffolding only.
+
 ## Overview
 
 _TODO: describe what SnackAttack does._
