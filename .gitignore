@@ -38,3 +38,6 @@ venv/
 # Misc
 tmp/
 *.tmp
+
+# Vercel
+.vercel/

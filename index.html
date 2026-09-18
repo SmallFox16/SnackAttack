@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SnackAttack</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #fdf8f3;
+      --fg: #2a2320;
+      --muted: #7a6a60;
+      --accent: #e8622c;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1614;
+        --fg: #f5ede6;
+        --muted: #a5958a;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    main { text-align: center; max-width: 32rem; }
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(2.25rem, 8vw, 3.5rem);
+      letter-spacing: -0.02em;
+    }
+    h1 span { color: var(--accent); }
+    p { margin: 0; color: var(--muted); }
+    .badge {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.35rem 0.8rem;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Hello, <span>world</span>!</h1>
+    <p>SnackAttack is up and running.</p>
+    <span class="badge">Deployed on Vercel</span>
+  </main>
+</body>
+</html>
