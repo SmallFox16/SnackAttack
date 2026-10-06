@@ -3,57 +3,583 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SnackAttack</title>
+  <meta name="description" content="SnackAttack helps ETSU students find vending machines by building and machine type." />
+  <title>SnackAttack | ETSU Vending Machine Finder</title>
   <style>
     :root {
-      color-scheme: light dark;
-      --bg: #fdf8f3;
-      --fg: #2a2320;
-      --muted: #7a6a60;
-      --accent: #e8622c;
+      --navy: #041e42;
+      --navy-2: #0b2f5f;
+      --gold: #fdb515;
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --text: #18202a;
+      --muted: #667085;
+      --border: #d9dee7;
+      --available-bg: #e7f6ec;
+      --available-fg: #176b36;
+      --unavailable-bg: #fdebec;
+      --unavailable-fg: #a32931;
+      --unknown-bg: #f1f3f5;
+      --unknown-fg: #5b6573;
+      --shadow: 0 8px 24px rgba(4, 30, 66, 0.08);
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #1a1614;
-        --fg: #f5ede6;
-        --muted: #a5958a;
-      }
-    }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--navy), var(--navy-2));
+      color: #fff;
+      border-bottom: 5px solid var(--gold);
+    }
+
+    .header-inner,
+    main {
+      width: min(1100px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .header-inner {
+      padding: 28px 0 30px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .brand-mark {
       display: grid;
       place-items: center;
-      padding: 24px;
-      background: var(--bg);
-      color: var(--fg);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: var(--gold);
+      color: var(--navy);
+      font-weight: 900;
+      font-size: 22px;
     }
-    main { text-align: center; max-width: 32rem; }
+
     h1 {
-      margin: 0 0 0.5rem;
-      font-size: clamp(2.25rem, 8vw, 3.5rem);
-      letter-spacing: -0.02em;
+      margin: 0;
+      font-size: clamp(2rem, 6vw, 3rem);
+      line-height: 1;
+      letter-spacing: -0.03em;
     }
-    h1 span { color: var(--accent); }
-    p { margin: 0; color: var(--muted); }
-    .badge {
-      display: inline-block;
-      margin-top: 1.5rem;
-      padding: 0.35rem 0.8rem;
-      border: 1px solid currentColor;
-      border-radius: 999px;
-      font-size: 0.8rem;
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: #dce5f1;
+      max-width: 680px;
+      font-size: 1rem;
+    }
+
+    main {
+      padding: 30px 0 48px;
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 18px;
+      padding: 20px;
+      margin-bottom: 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .toolbar-top {
+      display: flex;
+      gap: 16px;
+      align-items: end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .field {
+      flex: 1 1 280px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    input[type="search"] {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 13px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    input[type="search"]:focus,
+    .filter-btn:focus-visible,
+    .details-btn:focus-visible {
+      outline: 3px solid rgba(253, 181, 21, 0.45);
+      outline-offset: 2px;
+    }
+
+    .summary {
+      min-width: 190px;
       color: var(--muted);
+      font-weight: 650;
+      text-align: right;
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--navy);
+      padding: 9px 14px;
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--navy);
+    }
+
+    .filter-btn.active {
+      background: var(--navy);
+      border-color: var(--navy);
+      color: #fff;
+    }
+
+    .machine-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .machine-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .card-main {
+      padding: 20px;
+    }
+
+    .card-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .machine-number {
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .machine-card h2 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 1.3rem;
+    }
+
+    .machine-type {
+      display: inline-flex;
+      margin-top: 8px;
+      padding: 4px 9px;
+      border-radius: 7px;
+      background: #eef3f9;
+      color: var(--navy);
+      font-size: 0.84rem;
+      font-weight: 750;
+    }
+
+    .status {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status.available { background: var(--available-bg); color: var(--available-fg); }
+    .status.unavailable { background: var(--unavailable-bg); color: var(--unavailable-fg); }
+    .status.unknown { background: var(--unknown-bg); color: var(--unknown-fg); }
+
+    .details-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 20px;
+      border: 0;
+      border-top: 1px solid var(--border);
+      background: #fbfcfe;
+      color: var(--navy);
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .details-btn:hover {
+      background: #f5f8fc;
+    }
+
+    .chevron {
+      transition: transform 160ms ease;
+    }
+
+    .details-btn[aria-expanded="true"] .chevron {
+      transform: rotate(180deg);
+    }
+
+    .details {
+      padding: 0 20px 20px;
+      background: #fbfcfe;
+      border-top: 1px solid var(--border);
+    }
+
+    .details[hidden] { display: none; }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 22px;
+      padding-top: 18px;
+    }
+
+    .detail-item strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--navy);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .detail-item span {
+      color: #3d4754;
+    }
+
+    .detail-item.full {
+      grid-column: 1 / -1;
+    }
+
+    .empty-state,
+    .error-state {
+      padding: 34px;
+      background: #fff;
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .error-state {
+      color: var(--unavailable-fg);
+      border-color: #efb9bd;
+    }
+
+    footer {
+      text-align: center;
+      padding: 0 16px 26px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    @media (max-width: 620px) {
+      .header-inner,
+      main {
+        width: min(100% - 22px, 1100px);
+      }
+
+      .summary {
+        min-width: 0;
+        text-align: left;
+      }
+
+      .card-heading {
+        flex-direction: column;
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-item.full {
+        grid-column: auto;
+      }
     }
   </style>
 </head>
 <body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">S</div>
+        <h1>SnackAttack</h1>
+      </div>
+      <p class="subtitle">Find vending machines around ETSU and quickly check machine type, availability, location details, and directions.</p>
+    </div>
+  </header>
+
   <main>
-    <h1>Hello, <span>world</span>!</h1>
-    <p>SnackAttack is up and running.</p>
-    <span class="badge">Deployed on Vercel</span>
+    <section class="toolbar" aria-label="Vending machine filters">
+      <div class="toolbar-top">
+        <div class="field">
+          <label for="search">Search by building</label>
+          <input id="search" type="search" placeholder="Try Brinkley or Sam-Wilson" autocomplete="off" />
+        </div>
+        <div id="summary" class="summary" aria-live="polite">Loading vending machines…</div>
+      </div>
+
+      <div>
+        <label>Filter by machine type</label>
+        <div id="filters" class="filter-row" role="group" aria-label="Filter vending machines by type">
+          <button class="filter-btn active" type="button" data-type="All" aria-pressed="true">All</button>
+          <button class="filter-btn" type="button" data-type="Drink" aria-pressed="false">Drink</button>
+          <button class="filter-btn" type="button" data-type="Snack" aria-pressed="false">Snack</button>
+          <button class="filter-btn" type="button" data-type="Personal Care" aria-pressed="false">Personal Care</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="machineList" class="machine-grid" aria-live="polite"></section>
   </main>
+
+  <footer>SnackAttack · Sprint 1 vending machine finder</footer>
+
+  <script>
+    const state = {
+      machines: [],
+      type: "All",
+      search: ""
+    };
+
+    const machineList = document.getElementById("machineList");
+    const summary = document.getElementById("summary");
+    const search = document.getElementById("search");
+    const filters = document.getElementById("filters");
+
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let field = "";
+      let quoted = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '"' && quoted && next === '"') {
+          field += '"';
+          i++;
+        } else if (char === '"') {
+          quoted = !quoted;
+        } else if (char === "," && !quoted) {
+          row.push(field);
+          field = "";
+        } else if ((char === "\n" || char === "\r") && !quoted) {
+          if (char === "\r" && next === "\n") i++;
+          row.push(field);
+          field = "";
+          if (row.some(value => value.trim() !== "")) rows.push(row);
+          row = [];
+        } else {
+          field += char;
+        }
+      }
+
+      if (field.length || row.length) {
+        row.push(field);
+        if (row.some(value => value.trim() !== "")) rows.push(row);
+      }
+
+      if (rows.length < 2) return [];
+
+      const headers = rows[0].map(header => header.trim());
+      return rows.slice(1).map(values => Object.fromEntries(
+        headers.map((header, index) => [header, (values[index] || "").trim()])
+      ));
+    }
+
+    function escapeHTML(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function statusClass(status) {
+      const normalized = status.toLowerCase();
+      if (normalized === "available") return "available";
+      if (normalized === "unavailable") return "unavailable";
+      return "unknown";
+    }
+
+    function displayValue(value, fallback = "Not yet recorded") {
+      return value ? escapeHTML(value) : fallback;
+    }
+
+    function machineCard(machine) {
+      const id = `details-${machine.ID}`;
+      const availability = machine.Availability || "Unknown";
+
+      return `
+        <article class="machine-card">
+          <div class="card-main">
+            <div class="card-heading">
+              <div>
+                <p class="machine-number">Machine #${escapeHTML(machine.ID)}</p>
+                <h2>${escapeHTML(machine.Building)}</h2>
+                <span class="machine-type">${escapeHTML(machine.Type)} machine</span>
+              </div>
+              <span class="status ${statusClass(availability)}">${escapeHTML(availability)}</span>
+            </div>
+          </div>
+
+          <button class="details-btn" type="button" aria-expanded="false" aria-controls="${id}">
+            <span>View machine information</span>
+            <span class="chevron" aria-hidden="true">⌄</span>
+          </button>
+
+          <div class="details" id="${id}" hidden>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <strong>Machine type</strong>
+                <span>${displayValue(machine.Type)}</span>
+              </div>
+              <div class="detail-item">
+                <strong>Availability</strong>
+                <span>${displayValue(availability)}</span>
+              </div>
+              <div class="detail-item">
+                <strong>Payment</strong>
+                <span>${displayValue(machine.Payment)}</span>
+              </div>
+              <div class="detail-item">
+                <strong>GPS</strong>
+                <span>${displayValue(machine.GPS)}</span>
+              </div>
+              <div class="detail-item full">
+                <strong>Directions</strong>
+                <span>${displayValue(machine.Directions)}</span>
+              </div>
+              <div class="detail-item full">
+                <strong>Details</strong>
+                <span>${displayValue(machine.Details)}</span>
+              </div>
+            </div>
+          </div>
+        </article>`;
+    }
+
+    function filteredMachines() {
+      const searchTerm = state.search.trim().toLowerCase();
+      return state.machines.filter(machine => {
+        const typeMatches = state.type === "All" || machine.Type === state.type;
+        const searchMatches = !searchTerm || machine.Building.toLowerCase().includes(searchTerm);
+        return typeMatches && searchMatches;
+      });
+    }
+
+    function render() {
+      const machines = filteredMachines();
+      summary.textContent = `${machines.length} of ${state.machines.length} machine${state.machines.length === 1 ? "" : "s"} shown`;
+
+      if (!machines.length) {
+        machineList.innerHTML = '<div class="empty-state">No vending machines match the current filters.</div>';
+        return;
+      }
+
+      machineList.innerHTML = machines.map(machineCard).join("");
+    }
+
+    filters.addEventListener("click", event => {
+      const button = event.target.closest("button[data-type]");
+      if (!button) return;
+
+      state.type = button.dataset.type;
+      filters.querySelectorAll("button[data-type]").forEach(filterButton => {
+        const active = filterButton === button;
+        filterButton.classList.toggle("active", active);
+        filterButton.setAttribute("aria-pressed", String(active));
+      });
+      render();
+    });
+
+    search.addEventListener("input", event => {
+      state.search = event.target.value;
+      render();
+    });
+
+    machineList.addEventListener("click", event => {
+      const button = event.target.closest(".details-btn");
+      if (!button) return;
+
+      const details = document.getElementById(button.getAttribute("aria-controls"));
+      const expanded = button.getAttribute("aria-expanded") === "true";
+      button.setAttribute("aria-expanded", String(!expanded));
+      details.hidden = expanded;
+    });
+
+    async function loadMachines() {
+      try {
+        const response = await fetch("./vending_machines.csv", { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const csv = await response.text();
+        state.machines = parseCSV(csv);
+        render();
+      } catch (error) {
+        console.error("Unable to load vending machine data:", error);
+        summary.textContent = "Unable to load data";
+        machineList.innerHTML = '<div class="error-state">Vending machine data could not be loaded. Run the site through a web server rather than opening index.html directly.</div>';
+      }
+    }
+
+    loadMachines();
+  </script>
 </body>
 </html>

@@ -1,0 +1,10 @@
+ID,Building,Type,Availability,GPS,Payment,Directions,Details
+1,Brinkley,Drink,Unknown,"36.305500, -82.371389","Card and Cash","From the set of double doors closest to the Brinkley Center parking garage on the first floor, walk straight. The vending machine will be on the right.","45 drink slots; mostly Gatorade and water; also Monster, V8, and sodas."
+2,Brinkley,Snack,Unknown,"36.305500, -82.371389","Card and Cash","From the set of double doors closest to the Brinkley Center parking garage on the first floor, walk straight. The vending machine will be on the right.","40 snack slots; mostly candy, trail mix, and bars of various types."
+3,Brown,Drink,Unknown,,,"Location details pending verification.","Machine type recorded from Sprint 1 survey data."
+4,Culp Center,Personal Care,Unknown,,,"Location details pending verification.","Machine type recorded from Sprint 1 survey data."
+5,Ball,Drink,Unknown,,,"Location details pending verification.","Machine type recorded from Sprint 1 survey data."
+6,Gilbreath,Drink,Unknown,,,"Location details pending verification.","Machine type recorded from Sprint 1 survey data."
+7,Sam-Wilson,Drink,Unknown,,,"Location details pending verification.","Machine type recorded from Sprint 1 survey data."
+8,Sam-Wilson,Snack,Unknown,,,"Location details pending verification.","Machine type recorded from Sprint 1 survey data."
+99,Centennial,Drink,Unknown,,,"Location details pending verification.","Machine type recorded from Sprint 1 survey data."
