@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="SnackAttack helps ETSU students find vending machines by building and machine type." />
   <title>SnackAttack | ETSU Vending Machine Finder</title>
+  
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <style>
     :root {
       --navy: #041e42;
@@ -327,6 +334,13 @@
       font-size: 0.86rem;
     }
 
+    #campus-map {
+      height: 500px;
+      width: 100%;
+      border-radius: 8px;
+      z-index: 1;
+    }
+
     @media (max-width: 620px) {
       .header-inner,
       main {
@@ -382,6 +396,10 @@
           <button class="filter-btn" type="button" data-type="Personal Care" aria-pressed="false">Personal Care</button>
         </div>
       </div>
+      <section id="campus-map-section">
+        <h2>ETSU Vending Machine Map</h2>
+        <div id="campus-map"></div>
+      </section>
     </section>
 
     <section id="machineList" class="machine-grid" aria-live="polite"></section>
@@ -400,6 +418,17 @@
     const summary = document.getElementById("summary");
     const search = document.getElementById("search");
     const filters = document.getElementById("filters");
+
+
+    const campusMap = L.map('campus-map').setView(
+      [36.303, -82.369], 
+      16
+    );
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(campusMap);
 
     function parseCSV(text) {
       const rows = [];
