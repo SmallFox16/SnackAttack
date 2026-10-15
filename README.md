@@ -33,7 +33,8 @@ SnackAttack/
 ├── index.html                  # Front-end UI and client-side behavior
 ├── vending_machines.csv        # Vending-machine data used by the UI
 ├── miscFiles/
-│   └── VendingMachGenInfo      # Original verified Brinkley survey notes
+│   ├── VendingMachGenInfo      # Original verified Brinkley survey notes
+│   └── map-icons design.pdf    # How the map icons were built
 ├── Task13_NumVendingMachines   # Sprint count notes
 ├── vercel.json                 # Vercel static deployment configuration
 └── README.md
