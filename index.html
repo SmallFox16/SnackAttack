@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="SnackAttack helps ETSU students find vending machines by building and machine type." />
   <title>SnackAttack | ETSU Vending Machine Finder</title>
+  
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <style>
     :root {
       --navy: #041e42;
@@ -327,6 +334,39 @@
       font-size: 0.86rem;
     }
 
+    #campus-map {
+      height: 500px;
+      width: 100%;
+      border-radius: 8px;
+      z-index: 1;
+    }
+
+    .machine-marker {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border: 2px solid #fff;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 2px 6px rgba(4, 30, 66, 0.35);
+    }
+
+    .machine-marker span {
+      transform: rotate(45deg);
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .machine-marker.drink { background: #1f6fd1; }
+    .machine-marker.snack { background: var(--gold); }
+    .machine-marker.personal-care { background: #8a3ffc; }
+
+    .map-popup strong {
+      display: block;
+      color: var(--navy);
+    }
+
     @media (max-width: 620px) {
       .header-inner,
       main {
@@ -382,6 +422,10 @@
           <button class="filter-btn" type="button" data-type="Personal Care" aria-pressed="false">Personal Care</button>
         </div>
       </div>
+      <section id="campus-map-section">
+        <h2>ETSU Vending Machine Map</h2>
+        <div id="campus-map"></div>
+      </section>
     </section>
 
     <section id="machineList" class="machine-grid" aria-live="polite"></section>
@@ -400,6 +444,58 @@
     const summary = document.getElementById("summary");
     const search = document.getElementById("search");
     const filters = document.getElementById("filters");
+
+
+    const campusMap = L.map('campus-map').setView(
+      [36.3035, -82.3700],
+      16
+    );
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(campusMap);
+
+    const markerLayer = L.layerGroup().addTo(campusMap);
+
+    const markerEmoji = {
+      "Drink": "🥤",
+      "Snack": "🍫",
+      "Personal Care": "🧴"
+    };
+
+    function parseGPS(gps) {
+      const [lat, lng] = (gps || "").split(",").map(Number);
+      return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
+    }
+
+    function machineIcon(type) {
+      const typeClass = type.toLowerCase().replaceAll(" ", "-");
+      return L.divIcon({
+        className: "",
+        html: `<div class="machine-marker ${escapeHTML(typeClass)}"><span>${markerEmoji[type] || "🛒"}</span></div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -30]
+      });
+    }
+
+    function renderMarkers(machines) {
+      markerLayer.clearLayers();
+      machines.forEach(machine => {
+        const position = parseGPS(machine.GPS);
+        if (!position) return;
+
+        L.marker(position, { icon: machineIcon(machine.Type), title: `${machine.Building} ${machine.Type} machine` })
+          .bindPopup(`
+            <div class="map-popup">
+              <strong>${escapeHTML(machine.Building)} · ${escapeHTML(machine.Type)}</strong>
+              ${displayValue(machine.Payment)}<br />
+              ${displayValue(machine.Directions)}
+            </div>`)
+          .addTo(markerLayer);
+      });
+    }
 
     function parseCSV(text) {
       const rows = [];
@@ -528,6 +624,7 @@
     function render() {
       const machines = filteredMachines();
       summary.textContent = `${machines.length} of ${state.machines.length} machine${state.machines.length === 1 ? "" : "s"} shown`;
+      renderMarkers(machines);
 
       if (!machines.length) {
         machineList.innerHTML = '<div class="empty-state">No vending machines match the current filters.</div>';
