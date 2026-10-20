@@ -20,6 +20,7 @@ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 }).addTo(campusMap);
 
 const markerLayer = L.layerGroup().addTo(campusMap);
+const markersByMachineId = new Map();
 
 const markerEmoji = {
   Drink: "🥤",
@@ -65,12 +66,13 @@ function machineIcon(type) {
 
 function renderMarkers(machines) {
   markerLayer.clearLayers();
+  markersByMachineId.clear();
 
   machines.forEach((machine) => {
     const position = parseGPS(machine.GPS);
     if (!position) return;
 
-    L.marker(position, {
+    const marker = L.marker(position, {
       icon: machineIcon(machine.Type),
       title: `${machine.Building} ${machine.Type} machine`
     })
@@ -81,6 +83,8 @@ function renderMarkers(machines) {
           ${displayValue(machine.Directions)}
         </div>`)
       .addTo(markerLayer);
+
+    markersByMachineId.set(String(machine.ID), marker);
   });
 }
 
@@ -168,13 +172,16 @@ function machineCard(machine) {
   const availability = machine.Availability || "Unknown";
 
   return `
-    <article class="machine-card">
+    <article class="machine-card" data-machine-id="${escapeHTML(machine.ID)}">
       <div class="card-main">
         <div class="card-heading">
           <div>
             <p class="machine-number">Machine #${escapeHTML(machine.ID)}</p>
             <h2>${escapeHTML(machine.Building)}</h2>
             <span class="machine-type">${escapeHTML(machine.Type)} machine</span>
+            <button class="show-map-btn" type="button" data-machine-id="${escapeHTML(machine.ID)}">
+              Show on map
+            </button>
           </div>
           <span class="status ${statusClass(availability)}">${escapeHTML(availability)}</span>
         </div>
@@ -261,12 +268,35 @@ search.addEventListener("input", (event) => {
 });
 
 machineList.addEventListener("click", (event) => {
-  const button = event.target.closest(".details-btn");
-  if (!button) return;
+  const mapButton = event.target.closest(".show-map-btn");
 
-  const details = document.getElementById(button.getAttribute("aria-controls"));
-  const expanded = button.getAttribute("aria-expanded") === "true";
-  button.setAttribute("aria-expanded", String(!expanded));
+  if (mapButton) {
+    const machineId = mapButton.dataset.machineId;
+    const marker = markersByMachineId.get(String(machineId));
+
+    if (!marker) {
+      console.warn(`No map marker found for machine ${machineId}`);
+      return;
+    }
+
+    const position = marker.getLatLng();
+    campusMap.setView(position, 18, { animate: true });
+    marker.openPopup();
+
+    document.getElementById("campus-map-section").scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+
+    return;
+  }
+
+  const detailsButton = event.target.closest(".details-btn");
+  if (!detailsButton) return;
+
+  const details = document.getElementById(detailsButton.getAttribute("aria-controls"));
+  const expanded = detailsButton.getAttribute("aria-expanded") === "true";
+  detailsButton.setAttribute("aria-expanded", String(!expanded));
   details.hidden = expanded;
 });
 

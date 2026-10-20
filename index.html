@@ -137,7 +137,8 @@
 
     input[type="search"]:focus,
     .filter-btn:focus-visible,
-    .details-btn:focus-visible {
+    .details-btn:focus-visible,
+    .show-map-btn:focus-visible {
       outline: 3px solid rgba(253, 181, 21, 0.45);
       outline-offset: 2px;
     }
@@ -224,6 +225,26 @@
       color: var(--navy);
       font-size: 0.84rem;
       font-weight: 750;
+    }
+
+
+    .show-map-btn {
+      display: block;
+      margin-top: 10px;
+      padding: 7px 12px;
+      border: 1px solid var(--navy);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--navy);
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .show-map-btn:hover {
+      background: var(--navy);
+      color: #fff;
     }
 
     .status {
