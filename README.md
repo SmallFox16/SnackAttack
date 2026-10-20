@@ -1,61 +1,90 @@
 # SnackAttack
 
-SnackAttack is a lightweight web application for finding vending machines around ETSU. The Sprint 1 implementation displays vending-machine information from a CSV file and provides filtering, availability status, and expandable machine details.
+SnackAttack is a lightweight web application for finding vending machines around ETSU. The Sprint 3 version displays machine information, an interactive map, machine-level availability, product prices, and product-level availability while adding automated JavaScript quality checks.
 
-## Sprint 1 Features
+## Current Features
 
-- Display each vending machine's availability status.
-- Store availability in the vending-machine data.
-- Filter the machine list by type.
-- Use standardized machine types: `Drink`, `Snack`, and `Personal Care`.
-- Expand a machine card to view additional information.
-- Display machine type directly in the list.
-- Store observed machine types in the CSV data.
-- Store vending-machine records in `vending_machines.csv`.
-- Display vending-machine information in a responsive web UI.
-
-## Data Notes
-
-The original sample CSV used placeholder GPS coordinates for every machine. Those placeholders were removed. The verified Brinkley coordinates from `miscFiles/VendingMachGenInfo` are stored as decimal coordinates in the CSV. Other machines retain the building/type values from the Sprint 1 sample data, while unverified fields remain blank or are marked `Unknown` rather than inventing data.
-
-`Availability` supports these values:
-
-- `Available`
-- `Unavailable`
-- `Unknown`
-
-Update `Unknown` values after a machine's operating status has been verified.
+- Search vending machines by building.
+- Filter by standardized machine types: `Drink`, `Snack`, and `Personal Care`.
+- Display machine-level availability.
+- Expand machine cards for payment, GPS, directions, and notes.
+- Display mapped machines with Leaflet/OpenStreetMap.
+- Load machine records from `vending_machines.csv`.
+- Load product records from `products.json` and join them by machine ID.
+- Display product name, price, and product availability.
+- Preserve unknown/unsurveyed prices as `null` rather than inventing values.
+- Run ESLint locally and in GitHub Actions pull requests.
 
 ## Project Structure
 
 ```text
 SnackAttack/
-├── index.html                  # Front-end UI and client-side behavior
-├── vending_machines.csv        # Vending-machine data used by the UI
-├── miscFiles/
-│   ├── VendingMachGenInfo      # Original verified Brinkley survey notes
-│   └── map-icons design.pdf    # How the map icons were built
-├── Task13_NumVendingMachines   # Sprint count notes
-├── vercel.json                 # Vercel static deployment configuration
-└── README.md
+├── .github/workflows/quality.yml   # Pull-request quality check
+├── docs/
+│   ├── linting.md                  # Linting standard and usage
+│   └── product-pricing-design.md   # Product pricing/availability design
+├── app.js                          # Browser behavior and data rendering
+├── eslint.config.mjs                # ESLint configuration
+├── index.html                      # Front-end markup and styles
+├── package.json                    # Node scripts and ESLint dependency
+├── products.json                   # Product price/availability data
+├── vending_machines.csv            # Machine/location data
+└── vercel.json                     # Vercel static deployment config
 ```
+
+## Product Data
+
+`products.json` uses the machine ID from `vending_machines.csv` as `machineId`.
+
+Example:
+
+```json
+{
+  "machineId": 1,
+  "name": "Water",
+  "price": 1.75,
+  "availability": "Available"
+}
+```
+
+Allowed availability values are:
+
+- `Available`
+- `Unavailable`
+- `Unknown`
+
+A price that has not been physically verified should remain `null`.
 
 ## Run Locally
 
-The page loads its CSV with `fetch()`, so use a local web server instead of opening `index.html` with `file://`.
-
-From the project folder:
+The page loads CSV/JSON with `fetch()`, so run a local web server:
 
 ```bash
 python -m http.server 8000
 ```
 
-Then browse to:
+Then browse to `http://localhost:8000`.
 
-```text
-http://localhost:8000
+## Quality Checks
+
+Install dependencies:
+
+```bash
+npm install
 ```
+
+Run the same quality check used in CI:
+
+```bash
+npm run quality
+```
+
+See `docs/linting.md` for the standards and workflow.
+
+## Pull Requests
+
+`.github/workflows/quality.yml` runs ESLint automatically on pull requests to `main` or `dev`. Configure GitHub branch protection for `main` to require the **ESLint** check before a PR can merge.
 
 ## Production Deployment
 
-The repository is configured as a static site for Vercel. Use `main` as the Vercel production branch. Development changes should be made on `dev`, reviewed in a pull request, and merged into `main` when ready for production.
+Use `main` as the Vercel production branch. Development changes should be made on the sprint/development branch, reviewed by pull request, pass the ESLint status check, and then merge into `main`.
