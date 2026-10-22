@@ -137,7 +137,8 @@
 
     input[type="search"]:focus,
     .filter-btn:focus-visible,
-    .details-btn:focus-visible {
+    .details-btn:focus-visible,
+    .show-map-btn:focus-visible {
       outline: 3px solid rgba(253, 181, 21, 0.45);
       outline-offset: 2px;
     }
@@ -224,6 +225,26 @@
       color: var(--navy);
       font-size: 0.84rem;
       font-weight: 750;
+    }
+
+
+    .show-map-btn {
+      display: block;
+      margin-top: 10px;
+      padding: 7px 12px;
+      border: 1px solid var(--navy);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--navy);
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .show-map-btn:hover {
+      background: var(--navy);
+      color: #fff;
     }
 
     .status {
@@ -327,6 +348,68 @@
       border-color: #efb9bd;
     }
 
+    .product-section {
+      grid-column: 1 / -1;
+      margin-top: 4px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .product-section h3 {
+      margin: 0 0 10px;
+      color: var(--navy);
+      font-size: 1rem;
+    }
+
+    .product-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .product-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .product-name {
+      font-weight: 750;
+      color: var(--text);
+    }
+
+    .product-price {
+      color: var(--navy);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .product-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    .product-status.available { background: var(--available-bg); color: var(--available-fg); }
+    .product-status.unavailable { background: var(--unavailable-bg); color: var(--unavailable-fg); }
+    .product-status.unknown { background: var(--unknown-bg); color: var(--unknown-fg); }
+
+    .product-empty {
+      color: var(--muted);
+      font-style: italic;
+    }
+
     footer {
       text-align: center;
       padding: 0 16px 26px;
@@ -389,6 +472,11 @@
       .detail-item.full {
         grid-column: auto;
       }
+
+      .product-row {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
     }
   </style>
 </head>
@@ -399,7 +487,7 @@
         <div class="brand-mark" aria-hidden="true">S</div>
         <h1>SnackAttack</h1>
       </div>
-      <p class="subtitle">Find vending machines around ETSU and quickly check machine type, availability, location details, and directions.</p>
+      <p class="subtitle">Find vending machines around ETSU and quickly check machine type, machine availability, product prices, product availability, location details, and directions.</p>
     </div>
   </header>
 
@@ -431,252 +519,8 @@
     <section id="machineList" class="machine-grid" aria-live="polite"></section>
   </main>
 
-  <footer>SnackAttack · Sprint 1 vending machine finder</footer>
+  <footer>SnackAttack · Sprint 3 vending machine finder</footer>
 
-  <script>
-    const state = {
-      machines: [],
-      type: "All",
-      search: ""
-    };
-
-    const machineList = document.getElementById("machineList");
-    const summary = document.getElementById("summary");
-    const search = document.getElementById("search");
-    const filters = document.getElementById("filters");
-
-
-    const campusMap = L.map('campus-map').setView(
-      [36.3035, -82.3700],
-      16
-    );
-
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19
-    }).addTo(campusMap);
-
-    const markerLayer = L.layerGroup().addTo(campusMap);
-
-    const markerEmoji = {
-      "Drink": "🥤",
-      "Snack": "🍫",
-      "Personal Care": "🧴"
-    };
-
-    function parseGPS(gps) {
-      const [lat, lng] = (gps || "").split(",").map(Number);
-      return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
-    }
-
-    function machineIcon(type) {
-      const typeClass = type.toLowerCase().replaceAll(" ", "-");
-      return L.divIcon({
-        className: "",
-        html: `<div class="machine-marker ${escapeHTML(typeClass)}"><span>${markerEmoji[type] || "🛒"}</span></div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -30]
-      });
-    }
-
-    function renderMarkers(machines) {
-      markerLayer.clearLayers();
-      machines.forEach(machine => {
-        const position = parseGPS(machine.GPS);
-        if (!position) return;
-
-        L.marker(position, { icon: machineIcon(machine.Type), title: `${machine.Building} ${machine.Type} machine` })
-          .bindPopup(`
-            <div class="map-popup">
-              <strong>${escapeHTML(machine.Building)} · ${escapeHTML(machine.Type)}</strong>
-              ${displayValue(machine.Payment)}<br />
-              ${displayValue(machine.Directions)}
-            </div>`)
-          .addTo(markerLayer);
-      });
-    }
-
-    function parseCSV(text) {
-      const rows = [];
-      let row = [];
-      let field = "";
-      let quoted = false;
-
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const next = text[i + 1];
-
-        if (char === '"' && quoted && next === '"') {
-          field += '"';
-          i++;
-        } else if (char === '"') {
-          quoted = !quoted;
-        } else if (char === "," && !quoted) {
-          row.push(field);
-          field = "";
-        } else if ((char === "\n" || char === "\r") && !quoted) {
-          if (char === "\r" && next === "\n") i++;
-          row.push(field);
-          field = "";
-          if (row.some(value => value.trim() !== "")) rows.push(row);
-          row = [];
-        } else {
-          field += char;
-        }
-      }
-
-      if (field.length || row.length) {
-        row.push(field);
-        if (row.some(value => value.trim() !== "")) rows.push(row);
-      }
-
-      if (rows.length < 2) return [];
-
-      const headers = rows[0].map(header => header.trim());
-      return rows.slice(1).map(values => Object.fromEntries(
-        headers.map((header, index) => [header, (values[index] || "").trim()])
-      ));
-    }
-
-    function escapeHTML(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    function statusClass(status) {
-      const normalized = status.toLowerCase();
-      if (normalized === "available") return "available";
-      if (normalized === "unavailable") return "unavailable";
-      return "unknown";
-    }
-
-    function displayValue(value, fallback = "Not yet recorded") {
-      return value ? escapeHTML(value) : fallback;
-    }
-
-    function machineCard(machine) {
-      const id = `details-${machine.ID}`;
-      const availability = machine.Availability || "Unknown";
-
-      return `
-        <article class="machine-card">
-          <div class="card-main">
-            <div class="card-heading">
-              <div>
-                <p class="machine-number">Machine #${escapeHTML(machine.ID)}</p>
-                <h2>${escapeHTML(machine.Building)}</h2>
-                <span class="machine-type">${escapeHTML(machine.Type)} machine</span>
-              </div>
-              <span class="status ${statusClass(availability)}">${escapeHTML(availability)}</span>
-            </div>
-          </div>
-
-          <button class="details-btn" type="button" aria-expanded="false" aria-controls="${id}">
-            <span>View machine information</span>
-            <span class="chevron" aria-hidden="true">⌄</span>
-          </button>
-
-          <div class="details" id="${id}" hidden>
-            <div class="detail-grid">
-              <div class="detail-item">
-                <strong>Machine type</strong>
-                <span>${displayValue(machine.Type)}</span>
-              </div>
-              <div class="detail-item">
-                <strong>Availability</strong>
-                <span>${displayValue(availability)}</span>
-              </div>
-              <div class="detail-item">
-                <strong>Payment</strong>
-                <span>${displayValue(machine.Payment)}</span>
-              </div>
-              <div class="detail-item">
-                <strong>GPS</strong>
-                <span>${displayValue(machine.GPS)}</span>
-              </div>
-              <div class="detail-item full">
-                <strong>Directions</strong>
-                <span>${displayValue(machine.Directions)}</span>
-              </div>
-              <div class="detail-item full">
-                <strong>Details</strong>
-                <span>${displayValue(machine.Details)}</span>
-              </div>
-            </div>
-          </div>
-        </article>`;
-    }
-
-    function filteredMachines() {
-      const searchTerm = state.search.trim().toLowerCase();
-      return state.machines.filter(machine => {
-        const typeMatches = state.type === "All" || machine.Type === state.type;
-        const searchMatches = !searchTerm || machine.Building.toLowerCase().includes(searchTerm);
-        return typeMatches && searchMatches;
-      });
-    }
-
-    function render() {
-      const machines = filteredMachines();
-      summary.textContent = `${machines.length} of ${state.machines.length} machine${state.machines.length === 1 ? "" : "s"} shown`;
-      renderMarkers(machines);
-
-      if (!machines.length) {
-        machineList.innerHTML = '<div class="empty-state">No vending machines match the current filters.</div>';
-        return;
-      }
-
-      machineList.innerHTML = machines.map(machineCard).join("");
-    }
-
-    filters.addEventListener("click", event => {
-      const button = event.target.closest("button[data-type]");
-      if (!button) return;
-
-      state.type = button.dataset.type;
-      filters.querySelectorAll("button[data-type]").forEach(filterButton => {
-        const active = filterButton === button;
-        filterButton.classList.toggle("active", active);
-        filterButton.setAttribute("aria-pressed", String(active));
-      });
-      render();
-    });
-
-    search.addEventListener("input", event => {
-      state.search = event.target.value;
-      render();
-    });
-
-    machineList.addEventListener("click", event => {
-      const button = event.target.closest(".details-btn");
-      if (!button) return;
-
-      const details = document.getElementById(button.getAttribute("aria-controls"));
-      const expanded = button.getAttribute("aria-expanded") === "true";
-      button.setAttribute("aria-expanded", String(!expanded));
-      details.hidden = expanded;
-    });
-
-    async function loadMachines() {
-      try {
-        const response = await fetch("./vending_machines.csv", { cache: "no-store" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const csv = await response.text();
-        state.machines = parseCSV(csv);
-        render();
-      } catch (error) {
-        console.error("Unable to load vending machine data:", error);
-        summary.textContent = "Unable to load data";
-        machineList.innerHTML = '<div class="error-state">Vending machine data could not be loaded. Run the site through a web server rather than opening index.html directly.</div>';
-      }
-    }
-
-    loadMachines();
-  </script>
+  <script src="./app.js" defer></script>
 </body>
 </html>

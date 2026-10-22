@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "lastUpdated": "2026-10-20",
+  "notes": "Product names are based only on the existing Brinkley survey notes. Prices and product-level availability remain Unknown until a field survey records them.",
+  "products": [
+    { "machineId": 1, "name": "Gatorade", "price": 2.00, "availability": "Available" },
+    { "machineId": 1, "name": "Water", "price": 1.00, "availability": "Available" },
+    { "machineId": 1, "name": "Monster", "price": 4.00, "availability": "Available" },
+    { "machineId": 1, "name": "V8", "price": 1.50, "availability": "Available" },
+    { "machineId": 1, "name": "Soda", "price": 1.25, "availability": "Available" },
+    { "machineId": 2, "name": "Candy", "price": 2.50, "availability": "Available" },
+    { "machineId": 2, "name": "Trail Mix", "price": 1.25, "availability": "Available" },
+    { "machineId": 2, "name": "Big Texas Cinnamon Bun", "price": 2.50, "availability": "Available" }
+  ]
+}
