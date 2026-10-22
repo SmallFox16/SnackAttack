@@ -15,12 +15,12 @@ const filters = document.getElementById("filters");
 const campusMap = L.map("campus-map").setView([36.3035, -82.37], 16);
 
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "&copy; OpenStreetMap contributors"
+  attribution: "&copy; OpenStreetMap contributors",
   maxZoom: 19
 }).addTo(campusMap);
 
 const markerLayer = L.layerGroup().addTo(campusMap);
-const markersByMachineId = new Map()
+const markersByMachineId = new Map();
 
 const markerEmoji = {
   Drink: "🥤",
