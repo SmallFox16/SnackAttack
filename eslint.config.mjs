@@ -12,7 +12,8 @@ export default [
         Map: "readonly",
         Number: "readonly",
         String: "readonly",
-        L: "readonly"
+        L: "readonly",
+        navigator: "readonly"
       }
     },
     rules: {
