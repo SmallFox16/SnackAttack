@@ -30,7 +30,7 @@ jobs:
 
       - name: Start website
         run: |
-          npm run preview -- --host 127.0.0.1 --port 4173 &
+          python3 -m http.server 4173 --bind 127.0.0.1 &
           npx wait-on http://127.0.0.1:4173
 
       - name: Run axe accessibility tests
