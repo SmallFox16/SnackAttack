@@ -478,6 +478,16 @@
         align-items: start;
       }
     }
+
+    .location-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+  }
+.location-row .show-map-btn { margin-top: 0; }
+.location-status { color: var(--muted); font-size: 0.9rem; }
   </style>
 </head>
 <body>
@@ -512,6 +522,10 @@
       </div>
       <section id="campus-map-section">
         <h2>ETSU Vending Machine Map</h2>
+          <div class="location-row">
+          <button id="locateBtn" class="show-map-btn" type="button">📍 Use my location</button>
+          <span id="locationStatus" class="location-status" aria-live="polite"></span>
+          </div>
         <div id="campus-map"></div>
       </section>
     </section>
