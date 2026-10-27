@@ -4,7 +4,8 @@ const state = {
   machines: [],
   productsByMachine: new Map(),
   type: "All",
-  search: ""
+  search: "",
+  userLocation: null
 };
 
 const machineList = document.getElementById("machineList");
@@ -298,6 +299,85 @@ machineList.addEventListener("click", (event) => {
   const expanded = detailsButton.getAttribute("aria-expanded") === "true";
   detailsButton.setAttribute("aria-expanded", String(!expanded));
   details.hidden = expanded;
+});
+
+/* ---- User geolocation (Task #14) ---- */
+const locateBtn = document.getElementById("locateBtn");
+const locationStatus = document.getElementById("locationStatus");
+let userMarker = null;
+let accuracyCircle = null;
+
+function getUserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!("geolocation" in navigator)) {
+      reject(new Error("Geolocation is not supported by this browser."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        });
+      },
+      (error) => {
+        const messages = {
+          [error.PERMISSION_DENIED]: "Location permission was denied.",
+          [error.POSITION_UNAVAILABLE]: "Your location is currently unavailable.",
+          [error.TIMEOUT]: "Location request timed out. Try again."
+        };
+        reject(new Error(messages[error.code] || "Could not get your location."));
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  });
+}
+
+function showUserOnMap({ lat, lng, accuracy }) {
+  const position = [lat, lng];
+
+  if (userMarker) {
+    userMarker.setLatLng(position);
+    accuracyCircle.setLatLng(position).setRadius(accuracy);
+  } else {
+    accuracyCircle = L.circle(position, {
+      radius: accuracy,
+      color: "#1f6fd1",
+      fillOpacity: 0.1,
+      weight: 1,
+      interactive: false
+    }).addTo(campusMap);
+
+    userMarker = L.circleMarker(position, {
+      radius: 8,
+      color: "#fff",
+      weight: 2,
+      fillColor: "#1f6fd1",
+      fillOpacity: 1
+    })
+      .bindPopup('<div class="map-popup"><strong>You are here</strong></div>')
+      .addTo(campusMap);
+  }
+
+  campusMap.setView(position, 17, { animate: true });
+  userMarker.openPopup();
+}
+
+locateBtn.addEventListener("click", async () => {
+  locateBtn.disabled = true;
+  locationStatus.textContent = "Finding your location…";
+
+  try {
+    state.userLocation = await getUserLocation();
+    showUserOnMap(state.userLocation);
+    locationStatus.textContent = `Location found (±${Math.round(state.userLocation.accuracy)} m)`;
+  } catch (error) {
+    locationStatus.textContent = error.message;
+  } finally {
+    locateBtn.disabled = false;
+  }
 });
 
 async function loadData() {
