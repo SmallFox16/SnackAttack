@@ -34,6 +34,77 @@ function parseGPS(gps) {
   return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
 }
 
+/**
+ * Calculates the straight-line distance between two GPS points using the
+ * Haversine formula, which accounts for the Earth's curvature.
+ *
+ * @param {[number, number]} from - [lat, lng] of the first point.
+ * @param {[number, number]} to - [lat, lng] of the second point.
+ * @returns {number} Distance in meters.
+ */
+function distanceInMeters([lat1, lng1], [lat2, lng2]) {
+  const earthRadius = 6371000; // meters
+  const toRad = (degrees) => (degrees * Math.PI) / 180;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+
+  return 2 * earthRadius * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * Formats a distance for display: feet when close, miles when farther.
+ *
+ * @param {number} meters - Distance in meters.
+ * @returns {string} Readable distance, e.g. "420 ft away" or "1.3 mi away".
+ */
+function formatDistance(meters) {
+  const feet = meters * 3.28084;
+  return feet < 1000
+    ? `${Math.round(feet)} ft away`
+    : `${(meters / 1609.344).toFixed(1)} mi away`;
+}
+
+/**
+ * Gets the distance from the user to a machine.
+ *
+ * @param {object} machine - A machine row from vending_machines.csv.
+ * @returns {number|null} Distance in meters, or null if the user's location
+ *   hasn't been retrieved yet or the machine has no valid GPS value.
+ */
+function machineDistance(machine) {
+  const machinePosition = parseGPS(machine.GPS);
+  if (!state.userLocation || !machinePosition) return null;
+
+  return distanceInMeters(
+    [state.userLocation.lat, state.userLocation.lng],
+    machinePosition
+  );
+}
+
+/**
+ * Builds the distance badge for a machine card.
+ * Prompts the user to enable location if it hasn't been retrieved yet,
+ * and notes when a machine has no GPS value to measure from.
+ *
+ * @param {object} machine - A machine row from vending_machines.csv.
+ * @returns {string} HTML for the distance badge.
+ */
+function distanceBadge(machine) {
+  if (!state.userLocation) {
+    return '<span class="machine-distance muted">Enable location to view distance</span>';
+  }
+
+  const distance = machineDistance(machine);
+  if (distance === null) {
+    return '<span class="machine-distance muted">Distance unavailable</span>';
+  }
+
+  return `<span class="machine-distance">${formatDistance(distance)}</span>`;
+}
+
 function escapeHTML(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -180,6 +251,7 @@ function machineCard(machine) {
             <p class="machine-number">Machine #${escapeHTML(machine.ID)}</p>
             <h2>${escapeHTML(machine.Building)}</h2>
             <span class="machine-type">${escapeHTML(machine.Type)} machine</span>
+            ${distanceBadge(machine)}
             <button class="show-map-btn" type="button" data-machine-id="${escapeHTML(machine.ID)}">
               Show on map
             </button>
@@ -304,9 +376,21 @@ machineList.addEventListener("click", (event) => {
 /* ---- User geolocation (Task #14) ---- */
 const locateBtn = document.getElementById("locateBtn");
 const locationStatus = document.getElementById("locationStatus");
+
+// Kept outside the functions so repeat clicks move the existing marker
+// instead of stacking new ones on the map.
 let userMarker = null;
 let accuracyCircle = null;
 
+/**
+ * Requests the user's current position from the browser's Geolocation API.
+ * Wraps the callback-based getCurrentPosition in a Promise so it can be awaited.
+ *
+ * @returns {Promise<{lat: number, lng: number, accuracy: number}>}
+ *   Resolves with latitude, longitude, and accuracy radius in meters.
+ *   Rejects with a user-friendly Error if geolocation is unsupported,
+ *   permission is denied, the position is unavailable, or the request times out.
+ */
 function getUserLocation() {
   return new Promise((resolve, reject) => {
     if (!("geolocation" in navigator)) {
@@ -323,6 +407,7 @@ function getUserLocation() {
         });
       },
       (error) => {
+        // Map the browser's numeric error codes to readable messages
         const messages = {
           [error.PERMISSION_DENIED]: "Location permission was denied.",
           [error.POSITION_UNAVAILABLE]: "Your location is currently unavailable.",
@@ -330,15 +415,26 @@ function getUserLocation() {
         };
         reject(new Error(messages[error.code] || "Could not get your location."));
       },
+      // Prefer GPS-level accuracy, give up after 10s, accept a cached position up to 1 min old
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   });
 }
 
+/**
+ * Shows the user's position on the campus map as a blue dot with an
+ * accuracy circle, then centers the map on it.
+ * Added directly to campusMap (not markerLayer) so it survives re-renders
+ * when filters or search change.
+ *
+ * @param {{lat: number, lng: number, accuracy: number}} location
+ *   The position returned by getUserLocation().
+ */
 function showUserOnMap({ lat, lng, accuracy }) {
   const position = [lat, lng];
 
   if (userMarker) {
+    // Marker already exists from a previous click, so just move it
     userMarker.setLatLng(position);
     accuracyCircle.setLatLng(position).setRadius(accuracy);
   } else {
@@ -365,6 +461,12 @@ function showUserOnMap({ lat, lng, accuracy }) {
   userMarker.openPopup();
 }
 
+/**
+ * Handles the "Use my location" button: fetches the user's position,
+ * stores it in state.userLocation for later features (e.g. sorting by distance),
+ * shows it on the map, and reports success or failure in the status text.
+ * The button is disabled while the request is in progress to prevent double clicks.
+ */
 locateBtn.addEventListener("click", async () => {
   locateBtn.disabled = true;
   locationStatus.textContent = "Finding your location…";
@@ -372,6 +474,7 @@ locateBtn.addEventListener("click", async () => {
   try {
     state.userLocation = await getUserLocation();
     showUserOnMap(state.userLocation);
+    render();
     locationStatus.textContent = `Location found (±${Math.round(state.userLocation.accuracy)} m)`;
   } catch (error) {
     locationStatus.textContent = error.message;

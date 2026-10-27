@@ -486,8 +486,25 @@
       flex-wrap: wrap;
       margin-bottom: 12px;
   }
-.location-row .show-map-btn { margin-top: 0; }
-.location-status { color: var(--muted); font-size: 0.9rem; }
+    .location-row .show-map-btn { margin-top: 0; }
+    .location-status { color: var(--muted); font-size: 0.9rem; }
+
+    .machine-distance {
+      display: inline-flex;
+      margin: 8px 0 0 6px;
+      padding: 4px 9px;
+      border-radius: 7px;
+      background: #fff6df;
+      color: var(--navy);
+      font-size: 0.84rem;
+      font-weight: 750;
+  }
+
+  .machine-distance.muted {
+  background: var(--unknown-bg);
+  color: var(--unknown-fg);
+  font-weight: 650;
+}
   </style>
 </head>
 <body>
