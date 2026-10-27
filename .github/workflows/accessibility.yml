@@ -1,16 +1,13 @@
 
-name: Accessibility Tests
+name: Accessibility Checks
 
 on:
   push:
   pull_request:
-
-permissions:
-  contents: read
+  workflow_dispatch:
 
 jobs:
   accessibility:
-    name: axe accessibility checks
     runs-on: ubuntu-latest
 
     steps:
@@ -21,12 +18,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Install Chromium dependencies
-        run: npx playwright install-deps chromium
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
@@ -36,5 +31,5 @@ jobs:
           python3 -m http.server 4173 --bind 127.0.0.1 &
           npx wait-on http://127.0.0.1:4173
 
-      - name: Run axe accessibility tests
+      - name: Run accessibility tests
         run: npx playwright test tests/accessibility.spec.js

@@ -6,9 +6,13 @@
   "scripts": {
     "lint": "eslint app.js",
     "lint:fix": "eslint app.js --fix",
-    "quality": "npm run lint"
+    "quality": "npm run lint",
+    "test:a11y": "playwright test tests/accessibility.spec.js"
   },
   "devDependencies": {
-    "eslint": "^9.0.0"
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1",
+    "eslint": "^9.0.0",
+    "wait-on": "^9.5.1"
   }
 }
