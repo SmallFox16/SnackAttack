@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 test('homepage has no WCAG 2.1 A/AA accessibility violations', async ({ page }) => {
-  await page.goto('http://127.0.0.1:5500');
+  await page.goto('http://127.0.0.1:4173');
 
   const results = await new AxeBuilder({ page })
     .withTags([
