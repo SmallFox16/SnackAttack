@@ -22,6 +22,7 @@ SnackAttack is a lightweight web application for finding vending machines around
 SnackAttack/
 ├── .github/workflows/quality.yml   # Pull-request quality check
 ├── docs/
+│   ├── bug-parsegps-blank-coordinate.md  # Open bug: blank GPS part parsed as 0
 │   ├── distance-calculation-design.md  # Distance calculation design
 │   ├── linting.md                  # Linting standard and usage
 │   ├── product-pricing-design.md   # Product pricing/availability design

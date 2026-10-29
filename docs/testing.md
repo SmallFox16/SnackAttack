@@ -89,4 +89,4 @@ Each machine ID should map to a distance in meters, or `null` for machines witho
 ## Known gaps
 
 - No automated browser/UI tests; UI behavior is checked manually using the checklist above.
-- `parseGPS` treats a blank coordinate part as `0` — see [Known limitations](distance-calculation-design.md#known-limitations). There is no test for this yet because it documents current behavior that is expected to change.
+- `parseGPS` treats a blank coordinate part as `0` — see [`bug-parsegps-blank-coordinate.md`](bug-parsegps-blank-coordinate.md). There is no test for this yet because it documents current behavior that is expected to change.

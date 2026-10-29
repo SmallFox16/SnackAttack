@@ -77,7 +77,7 @@ Map keys are the machine `ID` converted to a **string**, matching how IDs are us
 
 ## Known limitations
 
-- **Blank coordinate parts parse as 0.** `parseGPS("36.3,")` returns `[36.3, 0]` instead of `null`, because `Number("")` is `0`. No current CSV row triggers this, but a typo in the data would place a machine at longitude 0 with a very large distance. Fixing it is a behavior change and should be its own task.
+- **Blank coordinate parts parse as 0.** `parseGPS("36.3,")` returns `[36.3, 0]` instead of `null`, because `Number("")` is `0`. No current CSV row triggers this, but a typo in the data would place a machine at longitude 0 with a very large distance. Fixing it is a behavior change and should be its own task. Full write-up: [`bug-parsegps-blank-coordinate.md`](bug-parsegps-blank-coordinate.md).
 - **GPS accuracy is not factored in.** The browser reports an accuracy radius (shown as `±N m`), but distances are calculated from the reported point only.
 - **Straight-line only.** Buildings, stairs, and floors are not considered.
 
