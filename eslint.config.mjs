@@ -32,7 +32,8 @@ export default [
     languageOptions: {
       globals: {
         parseGPS: "readonly",
-        calculateDistances: "readonly"
+        calculateDistances: "readonly",
+        formatDistance: "readonly"
       }
     }
   },

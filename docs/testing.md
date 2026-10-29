@@ -66,8 +66,13 @@ File: `tests/distance.test.js` — covers [`distance.js`](distance-calculation-d
 | `distanceInMeters` handles short campus distances | The two Brinkley machines are 4–6 m apart (actual ≈ 5.0 m) | Real campus data; checks precision at short range |
 | `calculateDistances` returns an empty Map without a user location | No location gives an empty result | **Edge case:** data loaded before location was granted |
 | `calculateDistances` keys by string ID and stores null for machines without GPS | Keys are strings; a no-GPS machine is present with `null` | **Failure case:** missing data is kept, not dropped or crashed on |
+| `formatDistance` shows feet for short imperial distances | 0 m → `0 ft`, 5 m → `16 ft`, 100 m → `328 ft` | Normal campus distances in the default unit |
+| `formatDistance` switches to miles at 0.1 mi (528 ft) | 160.6 m → `527 ft`, 160.8 m → `0.1 mi`, 1 mile → `1.0 mi` | **Edge case:** the boundary must never show `528 ft` |
+| `formatDistance` shows meters and kilometers for metric | `120 m`, `999 m`, 999.6 m → `1.0 km`, `1.2 km` | **Edge case:** rounding at the 1 km boundary |
+| `formatDistance` reports unavailable for machines without a distance | `null`, `undefined`, `NaN` → `Distance unavailable` | **Failure case:** machines without GPS |
+| `formatDistance` rejects an unknown unit | `"furlongs"` throws | **Failure case:** a typo in `DISTANCE_UNIT` fails loudly |
 
-Current result: **8/8 passing**, ESLint clean.
+Current result: **13/13 passing**, ESLint clean.
 
 ## Manual test checklist (mobile)
 
@@ -77,14 +82,12 @@ Run on a phone (iOS Safari and/or Android Chrome) against the deployed preview o
 - [ ] Tap **📍 Use my location** and allow permission: a user marker appears and the status shows `Location found (±N m)`.
 - [ ] Deny location permission: status shows "Location permission was denied." and the rest of the app still works.
 - [ ] Search and type filters still work after the location is found.
+- [ ] Before tapping **📍 Use my location**, cards show **no** distance line.
+- [ ] After the location is found, machines with GPS show `📍 N ft away` (or `mi`) on the card and in the map popup (**Show on map**).
+- [ ] Machines without GPS show `📍 Distance unavailable`.
+- [ ] Distance text fits on the card at phone width without overflowing.
 
-Distances are not shown in the UI yet, so to check them, run this in the browser console after the location is found:
-
-```js
-state.distancesByMachine
-```
-
-Each machine ID should map to a distance in meters, or `null` for machines without GPS.
+To check the raw distances in meters, run `state.distancesByMachine` in the browser console after the location is found.
 
 ## Known gaps
 
