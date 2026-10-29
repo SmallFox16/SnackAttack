@@ -2,6 +2,9 @@ import { sortMachinesByDistance } from "./sort-utils.mjs";
 
 /* SnackAttack client application. */
 
+// Unit system for displayed distances: "imperial" (ft/mi) or "metric" (m/km)
+const DISTANCE_UNIT = "imperial";
+
 const state = {
   machines: [],
   productsByMachine: new Map(),
@@ -36,63 +39,31 @@ const markerEmoji = {
   "Personal Care": "🧴"
 };
 
-function parseGPS(gps) {
-  const [lat, lng] = (gps || "").split(",").map(Number);
-  return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
-}
-
-/* ---- Distance calculation (Task #13) ---- */
-
-/**
- * Calculates the straight-line distance between two GPS points using the
- * Haversine formula, which accounts for the Earth's curvature.
- *
- * @param {[number, number]} from - [lat, lng] of the first point.
- * @param {[number, number]} to - [lat, lng] of the second point.
- * @returns {number} Distance in meters.
+/* ---- Distance calculation (Task #13) ----
+ * parseGPS and calculateDistances live in distance.js so they can be unit tested.
  */
-function distanceInMeters([lat1, lng1], [lat2, lng2]) {
-  const earthRadius = 6371000; // Mean radius of the Earth in meters
-
-  // Trig functions in JavaScript expect radians, not degrees
-  const toRad = (degrees) => (degrees * Math.PI) / 180;
-
-  // Differences between the two points, in radians
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-
-  // Haversine formula: "a" is the square of half the chord length between the points
-  const a = Math.sin(dLat / 2) ** 2
-    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-
-  // Convert to the angular distance, then multiply by the radius to get meters
-  return 2 * earthRadius * Math.asin(Math.sqrt(a));
-}
 
 /**
- * Calculates the distance from the user to every vending machine and stores
- * the results in state.distancesByMachine.
- * Does nothing if the user's location hasn't been retrieved yet.
- * Uses all machines (not just the filtered ones) so distances are always
- * available no matter which filters are active.
+ * Recalculates the distance from the user to every vending machine and stores
+ * the results in state.distancesByMachine (empty until the user's location is known).
  */
 function calculateMachineDistances() {
-  // Clear old results so a new location doesn't mix with stale distances
-  state.distancesByMachine.clear();
+  // Replace the whole Map so a new location doesn't mix with stale distances
+  state.distancesByMachine = calculateDistances(state.userLocation, state.machines);
+}
 
-  // Can't calculate anything without the user's position
-  if (!state.userLocation) return;
+/**
+ * Returns the display text for a machine's distance from the user (Task #12),
+ * or an empty string if the user's location isn't known yet.
+ */
+function distanceLabel(machineId) {
+  if (!state.userLocation) return "";
 
-  const userPosition = [state.userLocation.lat, state.userLocation.lng];
+  const meters = state.distancesByMachine.get(String(machineId));
+  const text = formatDistance(meters, DISTANCE_UNIT);
 
-  state.machines.forEach((machine) => {
-    const machinePosition = parseGPS(machine.GPS);
-
-    // Store null for machines missing GPS data so they still appear in the Map
-    const distance = machinePosition ? distanceInMeters(userPosition, machinePosition) : null;
-
-    state.distancesByMachine.set(String(machine.ID), distance);
-  });
+  // Machines without GPS just say "Distance unavailable"
+  return Number.isFinite(meters) ? `${text} away` : text;
 }
 
 /**
@@ -180,6 +151,7 @@ function renderMarkers(machines) {
     const position = parseGPS(machine.GPS);
     if (!position) return;
 
+    const distance = distanceLabel(machine.ID);
     const marker = L.marker(position, {
       icon: machineIcon(machine.Type),
       title: `${machine.Building} ${machine.Type} machine`
@@ -187,6 +159,7 @@ function renderMarkers(machines) {
       .bindPopup(`
         <div class="map-popup">
           <strong>${escapeHTML(machine.Building)} · ${escapeHTML(machine.Type)}</strong>
+          ${distance ? `<span class="popup-distance">${distance}</span>` : ""}
           ${displayValue(machine.Payment)}<br />
           ${displayValue(machine.Directions)}
         </div>`)
@@ -278,10 +251,7 @@ function productMarkup(machineId) {
 function machineCard(machine) {
   const id = `details-${machine.ID}`;
   const availability = machine.Availability || "Unknown";
-  const distance = state.distancesByMachine.get(String(machine.ID));
-  const distanceText = Number.isFinite(distance)
-    ? `${distance < 1000 ? `${Math.round(distance)} m` : `${(distance / 1000).toFixed(2)} km`} away`
-    : "Distance unavailable";
+  const distance = distanceLabel(machine.ID);
 
   return `
     <article class="machine-card" data-machine-id="${escapeHTML(machine.ID)}">
@@ -291,7 +261,7 @@ function machineCard(machine) {
             <p class="machine-number">Machine #${escapeHTML(machine.ID)}</p>
             <h2>${escapeHTML(machine.Building)}</h2>
             <span class="machine-type">${escapeHTML(machine.Type)} machine</span>
-            <span class="machine-distance">${escapeHTML(distanceText)}</span>
+            ${distance ? `<p class="machine-distance">📍 ${distance}</p>` : ""}
             <button class="show-map-btn" type="button" data-machine-id="${escapeHTML(machine.ID)}">
               Show on map
             </button>
@@ -512,7 +482,10 @@ locateBtn.addEventListener("click", async () => {
   try {
     state.userLocation = await getUserLocation();
     calculateMachineDistances(); // Location changed, so recalculate distances
-    updateMachinesByDistance();
+
+    // Redraw cards and popups with distances (loadData renders them if data isn't loaded yet)
+    if (state.machines.length) render();
+
     showUserOnMap(state.userLocation);
     render(); // Re-sort/re-display immediately if distance sorting is selected
     locationStatus.textContent = `Location found (±${Math.round(state.userLocation.accuracy)} m)`;

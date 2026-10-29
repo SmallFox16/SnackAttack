@@ -13,7 +13,9 @@ SnackAttack is a lightweight web application for finding vending machines around
 - Load product records from `products.json` and join them by machine ID.
 - Display product name, price, and product availability.
 - Preserve unknown/unsurveyed prices as `null` rather than inventing values.
-- Run ESLint locally and in GitHub Actions pull requests.
+- Locate the user on the map and calculate the straight-line distance (Haversine, in meters) from the user to each vending machine.
+- Show each machine's distance from the user (e.g. `📍 210 ft away`) on its card and map popup. The unit is set by `DISTANCE_UNIT` at the top of `app.js` (`"imperial"` for ft/mi or `"metric"` for m/km).
+- Run ESLint and unit tests locally and in GitHub Actions pull requests.
 
 ## Project Structure
 
@@ -21,13 +23,18 @@ SnackAttack is a lightweight web application for finding vending machines around
 SnackAttack/
 ├── .github/workflows/quality.yml   # Pull-request quality check
 ├── docs/
+│   ├── bug-parsegps-blank-coordinate.md  # Open bug: blank GPS part parsed as 0
+│   ├── distance-calculation-design.md  # Distance calculation design
 │   ├── linting.md                  # Linting standard and usage
-│   └── product-pricing-design.md   # Product pricing/availability design
+│   ├── product-pricing-design.md   # Product pricing/availability design
+│   └── testing.md                  # Testing standard, test inventory, mobile checklist
 ├── app.js                          # Browser behavior and data rendering
+├── distance.js                     # GPS parsing and distance helpers (unit tested)
 ├── eslint.config.mjs                # ESLint configuration
 ├── index.html                      # Front-end markup and styles
 ├── package.json                    # Node scripts and ESLint dependency
 ├── products.json                   # Product price/availability data
+├── tests/                          # Unit tests (Node's built-in test runner)
 ├── vending_machines.csv            # Machine/location data
 └── vercel.json                     # Vercel static deployment config
 ```
@@ -73,11 +80,19 @@ Install dependencies:
 npm install
 ```
 
-Run the same quality check used in CI:
+Run the same quality check used in CI (ESLint, then unit tests):
 
 ```bash
 npm run quality
 ```
+
+Run only the unit tests:
+
+```bash
+npm test
+```
+
+Tests use Node's built-in `node:test` runner, so no extra test dependencies are needed (Node 22+). Test files live in `tests/` and are named `*.test.js`. See [`docs/testing.md`](docs/testing.md) for how to add tests and the manual mobile checklist.
 
 See `docs/linting.md` for the standards and workflow.
 
