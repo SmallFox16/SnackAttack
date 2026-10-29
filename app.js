@@ -1,16 +1,23 @@
+import { sortMachinesByDistance } from "./sort-utils.mjs";
+
 /* SnackAttack client application. */
 
 const state = {
   machines: [],
   productsByMachine: new Map(),
   type: "All",
-  search: ""
+  search: "",
+  userLocation: null,
+  distancesByMachine: new Map(),
+  sort: "default"
 };
 
 const machineList = document.getElementById("machineList");
 const summary = document.getElementById("summary");
 const search = document.getElementById("search");
 const filters = document.getElementById("filters");
+const sortSelect = document.getElementById("sortSelect");
+const sortHint = document.getElementById("sortHint");
 
 const campusMap = L.map("campus-map").setView([36.3035, -82.37], 16);
 
@@ -31,6 +38,60 @@ const markerEmoji = {
 function parseGPS(gps) {
   const [lat, lng] = (gps || "").split(",").map(Number);
   return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
+}
+
+/* ---- Distance calculation (Task #13) ---- */
+
+/**
+ * Calculates the straight-line distance between two GPS points using the
+ * Haversine formula, which accounts for the Earth's curvature.
+ *
+ * @param {[number, number]} from - [lat, lng] of the first point.
+ * @param {[number, number]} to - [lat, lng] of the second point.
+ * @returns {number} Distance in meters.
+ */
+function distanceInMeters([lat1, lng1], [lat2, lng2]) {
+  const earthRadius = 6371000; // Mean radius of the Earth in meters
+
+  // Trig functions in JavaScript expect radians, not degrees
+  const toRad = (degrees) => (degrees * Math.PI) / 180;
+
+  // Differences between the two points, in radians
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+
+  // Haversine formula: "a" is the square of half the chord length between the points
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+
+  // Convert to the angular distance, then multiply by the radius to get meters
+  return 2 * earthRadius * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * Calculates the distance from the user to every vending machine and stores
+ * the results in state.distancesByMachine.
+ * Does nothing if the user's location hasn't been retrieved yet.
+ * Uses all machines (not just the filtered ones) so distances are always
+ * available no matter which filters are active.
+ */
+function calculateMachineDistances() {
+  // Clear old results so a new location doesn't mix with stale distances
+  state.distancesByMachine.clear();
+
+  // Can't calculate anything without the user's position
+  if (!state.userLocation) return;
+
+  const userPosition = [state.userLocation.lat, state.userLocation.lng];
+
+  state.machines.forEach((machine) => {
+    const machinePosition = parseGPS(machine.GPS);
+
+    // Store null for machines missing GPS data so they still appear in the Map
+    const distance = machinePosition ? distanceInMeters(userPosition, machinePosition) : null;
+
+    state.distancesByMachine.set(String(machine.ID), distance);
+  });
 }
 
 function escapeHTML(value) {
@@ -170,6 +231,10 @@ function productMarkup(machineId) {
 function machineCard(machine) {
   const id = `details-${machine.ID}`;
   const availability = machine.Availability || "Unknown";
+  const distance = state.distancesByMachine.get(String(machine.ID));
+  const distanceText = Number.isFinite(distance)
+    ? `${distance < 1000 ? `${Math.round(distance)} m` : `${(distance / 1000).toFixed(2)} km`} away`
+    : "Distance unavailable";
 
   return `
     <article class="machine-card" data-machine-id="${escapeHTML(machine.ID)}">
@@ -179,6 +244,7 @@ function machineCard(machine) {
             <p class="machine-number">Machine #${escapeHTML(machine.ID)}</p>
             <h2>${escapeHTML(machine.Building)}</h2>
             <span class="machine-type">${escapeHTML(machine.Type)} machine</span>
+            <span class="machine-distance">${escapeHTML(distanceText)}</span>
             <button class="show-map-btn" type="button" data-machine-id="${escapeHTML(machine.ID)}">
               Show on map
             </button>
@@ -236,8 +302,31 @@ function filteredMachines() {
   });
 }
 
-function render() {
+function displayedMachines() {
   const machines = filteredMachines();
+  return state.sort === "distance"
+    ? sortMachinesByDistance(machines, state.distancesByMachine)
+    : machines;
+}
+
+function updateSortAvailability() {
+  const distanceOption = sortSelect.querySelector('option[value="distance"]');
+  const hasLocation = Boolean(state.userLocation);
+  distanceOption.disabled = !hasLocation;
+
+  if (!hasLocation && state.sort === "distance") {
+    state.sort = "default";
+    sortSelect.value = "default";
+  }
+
+  sortHint.textContent = hasLocation
+    ? "Distance sorting is available."
+    : "Use your location to enable nearest-to-farthest sorting.";
+}
+
+function render() {
+  updateSortAvailability();
+  const machines = displayedMachines();
   summary.textContent = `${machines.length} of ${state.machines.length} machine${state.machines.length === 1 ? "" : "s"} shown`;
   renderMarkers(machines);
 
@@ -264,6 +353,11 @@ filters.addEventListener("click", (event) => {
 
 search.addEventListener("input", (event) => {
   state.search = event.target.value;
+  render();
+});
+
+sortSelect.addEventListener("change", (event) => {
+  state.sort = event.target.value;
   render();
 });
 
@@ -300,6 +394,87 @@ machineList.addEventListener("click", (event) => {
   details.hidden = expanded;
 });
 
+/* ---- User geolocation (Task #14) ---- */
+const locateBtn = document.getElementById("locateBtn");
+const locationStatus = document.getElementById("locationStatus");
+let userMarker = null;
+let accuracyCircle = null;
+
+function getUserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!("geolocation" in navigator)) {
+      reject(new Error("Geolocation is not supported by this browser."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        });
+      },
+      (error) => {
+        const messages = {
+          [error.PERMISSION_DENIED]: "Location permission was denied.",
+          [error.POSITION_UNAVAILABLE]: "Your location is currently unavailable.",
+          [error.TIMEOUT]: "Location request timed out. Try again."
+        };
+        reject(new Error(messages[error.code] || "Could not get your location."));
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  });
+}
+
+function showUserOnMap({ lat, lng, accuracy }) {
+  const position = [lat, lng];
+
+  if (userMarker) {
+    userMarker.setLatLng(position);
+    accuracyCircle.setLatLng(position).setRadius(accuracy);
+  } else {
+    accuracyCircle = L.circle(position, {
+      radius: accuracy,
+      color: "#1f6fd1",
+      fillOpacity: 0.1,
+      weight: 1,
+      interactive: false
+    }).addTo(campusMap);
+
+    userMarker = L.circleMarker(position, {
+      radius: 8,
+      color: "#fff",
+      weight: 2,
+      fillColor: "#1f6fd1",
+      fillOpacity: 1
+    })
+      .bindPopup('<div class="map-popup"><strong>You are here</strong></div>')
+      .addTo(campusMap);
+  }
+
+  campusMap.setView(position, 17, { animate: true });
+  userMarker.openPopup();
+}
+
+locateBtn.addEventListener("click", async () => {
+  locateBtn.disabled = true;
+  locationStatus.textContent = "Finding your location…";
+
+  try {
+    state.userLocation = await getUserLocation();
+    calculateMachineDistances(); // Location changed, so recalculate distances
+    showUserOnMap(state.userLocation);
+    render(); // Re-sort/re-display immediately if distance sorting is selected
+    locationStatus.textContent = `Location found (±${Math.round(state.userLocation.accuracy)} m)`;
+  } catch (error) {
+    locationStatus.textContent = error.message;
+  } finally {
+    locateBtn.disabled = false;
+  }
+});
+
 async function loadData() {
   try {
     const [machineResponse, productResponse] = await Promise.all([
@@ -317,6 +492,7 @@ async function loadData() {
 
     state.machines = parseCSV(csv);
     state.productsByMachine = normalizeProducts(productData);
+    calculateMachineDistances(); // Covers the case where location was found before data loaded
     render();
   } catch (error) {
     console.error("Unable to load SnackAttack data:", error);

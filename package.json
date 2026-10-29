@@ -4,10 +4,10 @@
   "private": true,
   "description": "ETSU vending machine finder",
   "scripts": {
-    "lint": "eslint app.js",
+    "lint": "eslint app.js sort-utils.mjs tests/**/*.mjs",
     "lint:fix": "eslint app.js --fix",
-    "quality": "npm run lint",
-    "test:a11y": "playwright test tests/accessibility.spec.js"
+    "quality": "npm run lint && npm test",
+    "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
