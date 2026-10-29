@@ -103,3 +103,22 @@ See `docs/linting.md` for the standards and workflow.
 ## Production Deployment
 
 Use `main` as the Vercel production branch. Development changes should be made on the sprint/development branch, reviewed by pull request, pass the ESLint status check, and then merge into `main`.
+
+## Sprint 4 — Distance sorting
+
+Sprint 4 adds user-location-based vending machine sorting:
+
+- **Sort control:** choose **Default order** or **Nearest to farthest**.
+- **Location prerequisite:** nearest-to-farthest is disabled until the browser successfully provides the user's location.
+- **Displayed list updates immediately:** after location is available, selecting distance sort reorders the visible, filtered machine cards using the calculated PBI-05 distances.
+- **Missing GPS behavior:** machines without a calculable distance remain visible and are placed after machines with known distances, preserving their original relative order.
+- **Distance display:** machine cards show the calculated distance when available; otherwise they show `Distance unavailable`.
+- **Automated verification:** `npm test` validates sorting accuracy, missing-distance behavior, no-location behavior, and non-mutation of the source list.
+
+Run the Sprint 4 quality gate with:
+
+```bash
+npm run quality
+```
+
+This now runs both ESLint and the Node test suite.

@@ -533,6 +533,16 @@
           <button class="filter-btn" type="button" data-type="Snack" aria-pressed="false">Snack</button>
           <button class="filter-btn" type="button" data-type="Personal Care" aria-pressed="false">Personal Care</button>
         </div>
+        <div class="sort-row">
+          <div class="sort-field">
+            <label for="sortSelect">Sort vending machines</label>
+            <select id="sortSelect">
+              <option value="default">Default order</option>
+              <option value="distance" disabled>Nearest to farthest</option>
+            </select>
+          </div>
+          <span id="sortHint" class="sort-hint" aria-live="polite">Use your location to enable nearest-to-farthest sorting.</span>
+        </div>
       </div>
       <section id="campus-map-section">
         <h2>ETSU Vending Machine Map</h2>
@@ -547,7 +557,7 @@
     <section id="machineList" class="machine-grid" aria-live="polite"></section>
   </main>
 
-  <footer>SnackAttack · Sprint 3 vending machine finder</footer>
+  <footer>SnackAttack · Sprint 4 vending machine finder</footer>
 
   <script src="./distance.js" defer></script>
   <script src="./app.js" defer></script>

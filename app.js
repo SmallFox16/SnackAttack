@@ -1,3 +1,5 @@
+import { sortMachinesByDistance } from "./sort-utils.mjs";
+
 /* SnackAttack client application. */
 
 // Unit system for displayed distances: "imperial" (ft/mi) or "metric" (m/km)
@@ -9,13 +11,17 @@ const state = {
   type: "All",
   search: "",
   userLocation: null,
-  distancesByMachine: new Map()
+  distancesByMachine: new Map(),
+  machinesByDistance: [],
+  sort: "default"
 };
 
 const machineList = document.getElementById("machineList");
 const summary = document.getElementById("summary");
 const search = document.getElementById("search");
 const filters = document.getElementById("filters");
+const sortSelect = document.getElementById("sortSelect");
+const sortHint = document.getElementById("sortHint");
 
 const campusMap = L.map("campus-map").setView([36.3035, -82.37], 16);
 
@@ -58,6 +64,52 @@ function distanceLabel(machineId) {
 
   // Machines without GPS just say "Distance unavailable"
   return Number.isFinite(meters) ? `${text} away` : text;
+}
+
+/**
+ * Sorts machines from nearest to farthest using state.distancesByMachine.
+ * Returns a new array so the original state.machines order is never changed.
+ * If the user's location hasn't been retrieved yet, the original order is kept.
+ * Machines without a distance (missing GPS) are placed at the end of the list.
+ *
+ * @param {object[]} machines - Machine rows to sort.
+ * @returns {object[]} A new array of machines ordered nearest to farthest.
+ */
+function sortMachinesByDistance(machines) {
+  // No location yet means no distances, so keep the CSV order
+  if (!state.distancesByMachine.size) return machines;
+
+  // Copy the array first because .sort() rearranges the array in place
+  return [...machines].sort((a, b) => {
+    const distanceA = state.distancesByMachine.get(String(a.ID));
+    const distanceB = state.distancesByMachine.get(String(b.ID));
+
+    // Push machines with no distance (null/undefined) to the bottom
+    const aMissing = distanceA === null || distanceA === undefined;
+    const bMissing = distanceB === null || distanceB === undefined;
+    if (aMissing && bMissing) return 0;
+    if (aMissing) return 1;
+    if (bMissing) return -1;
+
+    // Smaller distance first = nearest to farthest
+    return distanceA - distanceB;
+  });
+}
+
+/**
+ * Stores all machines in nearest-to-farthest order in state.machinesByDistance.
+ * Does not update the UI; it only calculates and saves the sorted order.
+ * Leaves the array empty if the user's location hasn't been retrieved yet.
+ */
+function updateMachinesByDistance() {
+  // No distances means there's nothing to sort by
+  if (!state.distancesByMachine.size) {
+    state.machinesByDistance = [];
+    return;
+  }
+
+  // Sort every machine (not just filtered ones) so the result works with any filter
+  state.machinesByDistance = sortMachinesByDistance(state.machines);
 }
 
 function escapeHTML(value) {
@@ -267,8 +319,31 @@ function filteredMachines() {
   });
 }
 
-function render() {
+function displayedMachines() {
   const machines = filteredMachines();
+  return state.sort === "distance"
+    ? sortMachinesByDistance(machines, state.distancesByMachine)
+    : machines;
+}
+
+function updateSortAvailability() {
+  const distanceOption = sortSelect.querySelector('option[value="distance"]');
+  const hasLocation = Boolean(state.userLocation);
+  distanceOption.disabled = !hasLocation;
+
+  if (!hasLocation && state.sort === "distance") {
+    state.sort = "default";
+    sortSelect.value = "default";
+  }
+
+  sortHint.textContent = hasLocation
+    ? "Distance sorting is available."
+    : "Use your location to enable nearest-to-farthest sorting.";
+}
+
+function render() {
+  updateSortAvailability();
+  const machines = displayedMachines();
   summary.textContent = `${machines.length} of ${state.machines.length} machine${state.machines.length === 1 ? "" : "s"} shown`;
   renderMarkers(machines);
 
@@ -295,6 +370,11 @@ filters.addEventListener("click", (event) => {
 
 search.addEventListener("input", (event) => {
   state.search = event.target.value;
+  render();
+});
+
+sortSelect.addEventListener("change", (event) => {
+  state.sort = event.target.value;
   render();
 });
 
@@ -407,6 +487,7 @@ locateBtn.addEventListener("click", async () => {
     if (state.machines.length) render();
 
     showUserOnMap(state.userLocation);
+    render(); // Re-sort/re-display immediately if distance sorting is selected
     locationStatus.textContent = `Location found (±${Math.round(state.userLocation.accuracy)} m)`;
   } catch (error) {
     locationStatus.textContent = error.message;
@@ -433,6 +514,7 @@ async function loadData() {
     state.machines = parseCSV(csv);
     state.productsByMachine = normalizeProducts(productData);
     calculateMachineDistances(); // Covers the case where location was found before data loaded
+    updateMachinesByDistance();
     render();
   } catch (error) {
     console.error("Unable to load SnackAttack data:", error);
