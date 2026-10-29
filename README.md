@@ -22,8 +22,10 @@ SnackAttack is a lightweight web application for finding vending machines around
 SnackAttack/
 ├── .github/workflows/quality.yml   # Pull-request quality check
 ├── docs/
+│   ├── distance-calculation-design.md  # Distance calculation design
 │   ├── linting.md                  # Linting standard and usage
-│   └── product-pricing-design.md   # Product pricing/availability design
+│   ├── product-pricing-design.md   # Product pricing/availability design
+│   └── testing.md                  # Testing standard, test inventory, mobile checklist
 ├── app.js                          # Browser behavior and data rendering
 ├── distance.js                     # GPS parsing and distance helpers (unit tested)
 ├── eslint.config.mjs                # ESLint configuration
@@ -88,7 +90,7 @@ Run only the unit tests:
 npm test
 ```
 
-Tests use Node's built-in `node:test` runner, so no extra test dependencies are needed (Node 22+). Test files live in `tests/` and are named `*.test.js`.
+Tests use Node's built-in `node:test` runner, so no extra test dependencies are needed (Node 22+). Test files live in `tests/` and are named `*.test.js`. See [`docs/testing.md`](docs/testing.md) for how to add tests and the manual mobile checklist.
 
 See `docs/linting.md` for the standards and workflow.
 
