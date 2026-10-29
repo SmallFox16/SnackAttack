@@ -37,8 +37,9 @@ export default [
     }
   },
   {
-    // distance.js and the tests are also loaded by Node as CommonJS
-    files: ["distance.js", "tests/**/*.js"],
+    // distance.js and the Node unit tests (*.test.js) are CommonJS;
+    // other files in tests/ (e.g. Playwright *.spec.js) stay ES modules
+    files: ["distance.js", "tests/**/*.test.js"],
     languageOptions: {
       sourceType: "commonjs",
       globals: {
