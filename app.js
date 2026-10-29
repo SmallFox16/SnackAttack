@@ -67,36 +67,6 @@ function distanceLabel(machineId) {
 }
 
 /**
- * Sorts machines from nearest to farthest using state.distancesByMachine.
- * Returns a new array so the original state.machines order is never changed.
- * If the user's location hasn't been retrieved yet, the original order is kept.
- * Machines without a distance (missing GPS) are placed at the end of the list.
- *
- * @param {object[]} machines - Machine rows to sort.
- * @returns {object[]} A new array of machines ordered nearest to farthest.
- */
-function sortMachinesByDistance(machines) {
-  // No location yet means no distances, so keep the CSV order
-  if (!state.distancesByMachine.size) return machines;
-
-  // Copy the array first because .sort() rearranges the array in place
-  return [...machines].sort((a, b) => {
-    const distanceA = state.distancesByMachine.get(String(a.ID));
-    const distanceB = state.distancesByMachine.get(String(b.ID));
-
-    // Push machines with no distance (null/undefined) to the bottom
-    const aMissing = distanceA === null || distanceA === undefined;
-    const bMissing = distanceB === null || distanceB === undefined;
-    if (aMissing && bMissing) return 0;
-    if (aMissing) return 1;
-    if (bMissing) return -1;
-
-    // Smaller distance first = nearest to farthest
-    return distanceA - distanceB;
-  });
-}
-
-/**
  * Stores all machines in nearest-to-farthest order in state.machinesByDistance.
  * Does not update the UI; it only calculates and saves the sorted order.
  * Leaves the array empty if the user's location hasn't been retrieved yet.
@@ -109,7 +79,7 @@ function updateMachinesByDistance() {
   }
 
   // Sort every machine (not just filtered ones) so the result works with any filter
-  state.machinesByDistance = sortMachinesByDistance(state.machines);
+  state.machinesByDistance = sortMachinesByDistance(state.machines, state.distancesByMachine);
 }
 
 function escapeHTML(value) {
