@@ -64,7 +64,45 @@ function calculateDistances(userLocation, machines) {
   return distances;
 }
 
+/* ---- Distance display (Task #12) ---- */
+
+const METERS_PER_FOOT = 0.3048;
+const METERS_PER_MILE = 1609.344;
+const FEET_PER_MILE = 5280;
+
+/**
+ * Formats a distance for display in the given unit system.
+ * Short distances use feet/meters; anything from 0.1 mi (528 ft) or 1 km up
+ * uses miles/kilometers with one decimal place.
+ *
+ * @param {number|null} meters - Distance in meters, or null if unknown.
+ * @param {"imperial"|"metric"} unit - Unit system to display.
+ * @returns {string} e.g. "350 ft", "0.4 mi", "120 m", "1.2 km",
+ *   or "Distance unavailable" when meters is null or not a number.
+ */
+function formatDistance(meters, unit) {
+  if (unit !== "imperial" && unit !== "metric") {
+    throw new Error(`Unknown distance unit: ${unit}`);
+  }
+
+  // Machines without GPS data have a null distance
+  if (!Number.isFinite(meters)) return "Distance unavailable";
+
+  if (unit === "imperial") {
+    // Round first so 527.6 ft shows as "0.1 mi" instead of "528 ft"
+    const feet = Math.round(meters / METERS_PER_FOOT);
+    return feet < FEET_PER_MILE / 10
+      ? `${feet} ft`
+      : `${(meters / METERS_PER_MILE).toFixed(1)} mi`;
+  }
+
+  const roundedMeters = Math.round(meters);
+  return roundedMeters < 1000
+    ? `${roundedMeters} m`
+    : `${(meters / 1000).toFixed(1)} km`;
+}
+
 // Expose the helpers to Node for unit tests; in the browser they are globals.
 if (typeof module !== "undefined") {
-  module.exports = { parseGPS, distanceInMeters, calculateDistances };
+  module.exports = { parseGPS, distanceInMeters, calculateDistances, formatDistance };
 }

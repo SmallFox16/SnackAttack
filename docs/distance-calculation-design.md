@@ -4,7 +4,7 @@
 
 Calculate how far the user is from every vending machine so later features (closest machine, sorting by distance, showing "X ft away") can build on one shared, tested source of distances.
 
-This task covers **calculation only**. Displaying distances and finding the closest machine are separate PBIs.
+Calculation was Task #13; displaying the distance is Task #12 (see [Display](#display-task-12)). Finding the closest machine is a separate PBI.
 
 ## Distance definition
 
@@ -74,6 +74,39 @@ Distances are calculated for **all** machines, not just the ones matching the cu
 | Machine GPS is empty or not a number | Entry is `null` (machine is still listed, so it is not silently dropped) |
 
 Map keys are the machine `ID` converted to a **string**, matching how IDs are used elsewhere in `app.js`.
+
+## Display (Task #12)
+
+After the user taps **📍 Use my location**, each machine card and map popup shows the distance:
+
+| Situation | Card / popup text |
+|---|---|
+| Location not found yet | Nothing (no distance line) |
+| Machine has GPS | `📍 210 ft away` |
+| Machine has no GPS | `📍 Distance unavailable` |
+
+### Configured unit
+
+`DISTANCE_UNIT` at the top of `app.js` sets the unit system:
+
+- `"imperial"` (default): feet under 0.1 mi (528 ft), then miles with one decimal (`0.2 mi`)
+- `"metric"`: meters under 1 km, then kilometers with one decimal (`1.2 km`)
+
+Imperial is the default because SnackAttack's users are in the US. Any other value makes `formatDistance` throw, so a typo shows up immediately instead of silently showing the wrong unit.
+
+The switch-over check uses the **rounded** value, so a distance never displays as `528 ft` or `1000 m`; it shows `0.1 mi` or `1.0 km` instead.
+
+### Code
+
+- `formatDistance(meters, unit)` in `distance.js`: pure formatting, unit tested.
+- `distanceLabel(machineId)` in `app.js`: returns `""` before the location is known, adds `away` to real distances.
+- The location handler calls `render()` after recalculating distances so the cards and popups update. It skips this if the machine data hasn't loaded yet, because `loadData()` renders once the data arrives.
+
+### Display limitations
+
+- Re-rendering after the location is found collapses any machine card the user had expanded.
+- The location status still shows GPS accuracy in meters (`±15 m`) regardless of `DISTANCE_UNIT`.
+- The list is not sorted by distance; that belongs to the closest-machine PBI.
 
 ## Known limitations
 

@@ -1,5 +1,8 @@
 /* SnackAttack client application. */
 
+// Unit system for displayed distances: "imperial" (ft/mi) or "metric" (m/km)
+const DISTANCE_UNIT = "imperial";
+
 const state = {
   machines: [],
   productsByMachine: new Map(),
@@ -43,6 +46,20 @@ function calculateMachineDistances() {
   state.distancesByMachine = calculateDistances(state.userLocation, state.machines);
 }
 
+/**
+ * Returns the display text for a machine's distance from the user (Task #12),
+ * or an empty string if the user's location isn't known yet.
+ */
+function distanceLabel(machineId) {
+  if (!state.userLocation) return "";
+
+  const meters = state.distancesByMachine.get(String(machineId));
+  const text = formatDistance(meters, DISTANCE_UNIT);
+
+  // Machines without GPS just say "Distance unavailable"
+  return Number.isFinite(meters) ? `${text} away` : text;
+}
+
 function escapeHTML(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -82,6 +99,7 @@ function renderMarkers(machines) {
     const position = parseGPS(machine.GPS);
     if (!position) return;
 
+    const distance = distanceLabel(machine.ID);
     const marker = L.marker(position, {
       icon: machineIcon(machine.Type),
       title: `${machine.Building} ${machine.Type} machine`
@@ -89,6 +107,7 @@ function renderMarkers(machines) {
       .bindPopup(`
         <div class="map-popup">
           <strong>${escapeHTML(machine.Building)} · ${escapeHTML(machine.Type)}</strong>
+          ${distance ? `<span class="popup-distance">${distance}</span>` : ""}
           ${displayValue(machine.Payment)}<br />
           ${displayValue(machine.Directions)}
         </div>`)
@@ -180,6 +199,7 @@ function productMarkup(machineId) {
 function machineCard(machine) {
   const id = `details-${machine.ID}`;
   const availability = machine.Availability || "Unknown";
+  const distance = distanceLabel(machine.ID);
 
   return `
     <article class="machine-card" data-machine-id="${escapeHTML(machine.ID)}">
@@ -189,6 +209,7 @@ function machineCard(machine) {
             <p class="machine-number">Machine #${escapeHTML(machine.ID)}</p>
             <h2>${escapeHTML(machine.Building)}</h2>
             <span class="machine-type">${escapeHTML(machine.Type)} machine</span>
+            ${distance ? `<p class="machine-distance">📍 ${distance}</p>` : ""}
             <button class="show-map-btn" type="button" data-machine-id="${escapeHTML(machine.ID)}">
               Show on map
             </button>
@@ -381,6 +402,10 @@ locateBtn.addEventListener("click", async () => {
   try {
     state.userLocation = await getUserLocation();
     calculateMachineDistances(); // Location changed, so recalculate distances
+
+    // Redraw cards and popups with distances (loadData renders them if data isn't loaded yet)
+    if (state.machines.length) render();
+
     showUserOnMap(state.userLocation);
     locationStatus.textContent = `Location found (±${Math.round(state.userLocation.accuracy)} m)`;
   } catch (error) {

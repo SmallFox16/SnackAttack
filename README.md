@@ -14,6 +14,7 @@ SnackAttack is a lightweight web application for finding vending machines around
 - Display product name, price, and product availability.
 - Preserve unknown/unsurveyed prices as `null` rather than inventing values.
 - Locate the user on the map and calculate the straight-line distance (Haversine, in meters) from the user to each vending machine.
+- Show each machine's distance from the user (e.g. `📍 210 ft away`) on its card and map popup. The unit is set by `DISTANCE_UNIT` at the top of `app.js` (`"imperial"` for ft/mi or `"metric"` for m/km).
 - Run ESLint and unit tests locally and in GitHub Actions pull requests.
 
 ## Project Structure
