@@ -25,5 +25,27 @@ export default [
       "curly": ["error", "multi-line"],
       "prefer-const": "error"
     }
+  },
+  {
+    // app.js uses the helpers that distance.js defines as browser globals
+    files: ["app.js"],
+    languageOptions: {
+      globals: {
+        parseGPS: "readonly",
+        calculateDistances: "readonly"
+      }
+    }
+  },
+  {
+    // distance.js and the tests are also loaded by Node as CommonJS
+    files: ["distance.js", "tests/**/*.js"],
+    languageOptions: {
+      sourceType: "commonjs",
+      globals: {
+        module: "readonly",
+        require: "readonly",
+        Math: "readonly"
+      }
+    }
   }
 ];

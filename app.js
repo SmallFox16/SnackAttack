@@ -30,63 +30,17 @@ const markerEmoji = {
   "Personal Care": "🧴"
 };
 
-function parseGPS(gps) {
-  const [lat, lng] = (gps || "").split(",").map(Number);
-  return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
-}
-
-/* ---- Distance calculation (Task #13) ---- */
-
-/**
- * Calculates the straight-line distance between two GPS points using the
- * Haversine formula, which accounts for the Earth's curvature.
- *
- * @param {[number, number]} from - [lat, lng] of the first point.
- * @param {[number, number]} to - [lat, lng] of the second point.
- * @returns {number} Distance in meters.
+/* ---- Distance calculation (Task #13) ----
+ * parseGPS and calculateDistances live in distance.js so they can be unit tested.
  */
-function distanceInMeters([lat1, lng1], [lat2, lng2]) {
-  const earthRadius = 6371000; // Mean radius of the Earth in meters
-
-  // Trig functions in JavaScript expect radians, not degrees
-  const toRad = (degrees) => (degrees * Math.PI) / 180;
-
-  // Differences between the two points, in radians
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-
-  // Haversine formula: "a" is the square of half the chord length between the points
-  const a = Math.sin(dLat / 2) ** 2
-    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-
-  // Convert to the angular distance, then multiply by the radius to get meters
-  return 2 * earthRadius * Math.asin(Math.sqrt(a));
-}
 
 /**
- * Calculates the distance from the user to every vending machine and stores
- * the results in state.distancesByMachine.
- * Does nothing if the user's location hasn't been retrieved yet.
- * Uses all machines (not just the filtered ones) so distances are always
- * available no matter which filters are active.
+ * Recalculates the distance from the user to every vending machine and stores
+ * the results in state.distancesByMachine (empty until the user's location is known).
  */
 function calculateMachineDistances() {
-  // Clear old results so a new location doesn't mix with stale distances
-  state.distancesByMachine.clear();
-
-  // Can't calculate anything without the user's position
-  if (!state.userLocation) return;
-
-  const userPosition = [state.userLocation.lat, state.userLocation.lng];
-
-  state.machines.forEach((machine) => {
-    const machinePosition = parseGPS(machine.GPS);
-
-    // Store null for machines missing GPS data so they still appear in the Map
-    const distance = machinePosition ? distanceInMeters(userPosition, machinePosition) : null;
-
-    state.distancesByMachine.set(String(machine.ID), distance);
-  });
+  // Replace the whole Map so a new location doesn't mix with stale distances
+  state.distancesByMachine = calculateDistances(state.userLocation, state.machines);
 }
 
 function escapeHTML(value) {

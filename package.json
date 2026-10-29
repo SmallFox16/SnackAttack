@@ -4,9 +4,10 @@
   "private": true,
   "description": "ETSU vending machine finder",
   "scripts": {
-    "lint": "eslint app.js",
-    "lint:fix": "eslint app.js --fix",
-    "quality": "npm run lint"
+    "lint": "eslint app.js distance.js tests",
+    "lint:fix": "eslint app.js distance.js tests --fix",
+    "test": "node --test",
+    "quality": "npm run lint && npm test"
   },
   "devDependencies": {
     "eslint": "^9.0.0"
