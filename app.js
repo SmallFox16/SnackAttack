@@ -1,16 +1,27 @@
+import { sortMachinesByDistance } from "./sort-utils.mjs";
+
 /* SnackAttack client application. */
+
+// Unit system for displayed distances: "imperial" (ft/mi) or "metric" (m/km)
+const DISTANCE_UNIT = "imperial";
 
 const state = {
   machines: [],
   productsByMachine: new Map(),
   type: "All",
-  search: ""
+  search: "",
+  userLocation: null,
+  distancesByMachine: new Map(),
+  machinesByDistance: [],
+  sort: "default"
 };
 
 const machineList = document.getElementById("machineList");
 const summary = document.getElementById("summary");
 const search = document.getElementById("search");
 const filters = document.getElementById("filters");
+const sortSelect = document.getElementById("sortSelect");
+const sortHint = document.getElementById("sortHint");
 
 const campusMap = L.map("campus-map").setView([36.3035, -82.37], 16);
 
@@ -28,9 +39,47 @@ const markerEmoji = {
   "Personal Care": "🧴"
 };
 
-function parseGPS(gps) {
-  const [lat, lng] = (gps || "").split(",").map(Number);
-  return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
+/* ---- Distance calculation (Task #13) ----
+ * parseGPS and calculateDistances live in distance.js so they can be unit tested.
+ */
+
+/**
+ * Recalculates the distance from the user to every vending machine and stores
+ * the results in state.distancesByMachine (empty until the user's location is known).
+ */
+function calculateMachineDistances() {
+  // Replace the whole Map so a new location doesn't mix with stale distances
+  state.distancesByMachine = calculateDistances(state.userLocation, state.machines);
+}
+
+/**
+ * Returns the display text for a machine's distance from the user (Task #12),
+ * or an empty string if the user's location isn't known yet.
+ */
+function distanceLabel(machineId) {
+  if (!state.userLocation) return "";
+
+  const meters = state.distancesByMachine.get(String(machineId));
+  const text = formatDistance(meters, DISTANCE_UNIT);
+
+  // Machines without GPS just say "Distance unavailable"
+  return Number.isFinite(meters) ? `${text} away` : text;
+}
+
+/**
+ * Stores all machines in nearest-to-farthest order in state.machinesByDistance.
+ * Does not update the UI; it only calculates and saves the sorted order.
+ * Leaves the array empty if the user's location hasn't been retrieved yet.
+ */
+function updateMachinesByDistance() {
+  // No distances means there's nothing to sort by
+  if (!state.distancesByMachine.size) {
+    state.machinesByDistance = [];
+    return;
+  }
+
+  // Sort every machine (not just filtered ones) so the result works with any filter
+  state.machinesByDistance = sortMachinesByDistance(state.machines, state.distancesByMachine);
 }
 
 function escapeHTML(value) {
@@ -72,6 +121,7 @@ function renderMarkers(machines) {
     const position = parseGPS(machine.GPS);
     if (!position) return;
 
+    const distance = distanceLabel(machine.ID);
     const marker = L.marker(position, {
       icon: machineIcon(machine.Type),
       title: `${machine.Building} ${machine.Type} machine`
@@ -79,6 +129,7 @@ function renderMarkers(machines) {
       .bindPopup(`
         <div class="map-popup">
           <strong>${escapeHTML(machine.Building)} · ${escapeHTML(machine.Type)}</strong>
+          ${distance ? `<span class="popup-distance">${distance}</span>` : ""}
           ${displayValue(machine.Payment)}<br />
           ${displayValue(machine.Directions)}
         </div>`)
@@ -170,6 +221,7 @@ function productMarkup(machineId) {
 function machineCard(machine) {
   const id = `details-${machine.ID}`;
   const availability = machine.Availability || "Unknown";
+  const distance = distanceLabel(machine.ID);
 
   return `
     <article class="machine-card" data-machine-id="${escapeHTML(machine.ID)}">
@@ -179,6 +231,7 @@ function machineCard(machine) {
             <p class="machine-number">Machine #${escapeHTML(machine.ID)}</p>
             <h2>${escapeHTML(machine.Building)}</h2>
             <span class="machine-type">${escapeHTML(machine.Type)} machine</span>
+            ${distance ? `<p class="machine-distance">📍 ${distance}</p>` : ""}
             <button class="show-map-btn" type="button" data-machine-id="${escapeHTML(machine.ID)}">
               Show on map
             </button>
@@ -236,8 +289,31 @@ function filteredMachines() {
   });
 }
 
-function render() {
+function displayedMachines() {
   const machines = filteredMachines();
+  return state.sort === "distance"
+    ? sortMachinesByDistance(machines, state.distancesByMachine)
+    : machines;
+}
+
+function updateSortAvailability() {
+  const distanceOption = sortSelect.querySelector('option[value="distance"]');
+  const hasLocation = Boolean(state.userLocation);
+  distanceOption.disabled = !hasLocation;
+
+  if (!hasLocation && state.sort === "distance") {
+    state.sort = "default";
+    sortSelect.value = "default";
+  }
+
+  sortHint.textContent = hasLocation
+    ? "Distance sorting is available."
+    : "Use your location to enable nearest-to-farthest sorting.";
+}
+
+function render() {
+  updateSortAvailability();
+  const machines = displayedMachines();
   summary.textContent = `${machines.length} of ${state.machines.length} machine${state.machines.length === 1 ? "" : "s"} shown`;
   renderMarkers(machines);
 
@@ -264,6 +340,11 @@ filters.addEventListener("click", (event) => {
 
 search.addEventListener("input", (event) => {
   state.search = event.target.value;
+  render();
+});
+
+sortSelect.addEventListener("change", (event) => {
+  state.sort = event.target.value;
   render();
 });
 
@@ -300,6 +381,91 @@ machineList.addEventListener("click", (event) => {
   details.hidden = expanded;
 });
 
+/* ---- User geolocation (Task #14) ---- */
+const locateBtn = document.getElementById("locateBtn");
+const locationStatus = document.getElementById("locationStatus");
+let userMarker = null;
+let accuracyCircle = null;
+
+function getUserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!("geolocation" in navigator)) {
+      reject(new Error("Geolocation is not supported by this browser."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        });
+      },
+      (error) => {
+        const messages = {
+          [error.PERMISSION_DENIED]: "Location permission was denied.",
+          [error.POSITION_UNAVAILABLE]: "Your location is currently unavailable.",
+          [error.TIMEOUT]: "Location request timed out. Try again."
+        };
+        reject(new Error(messages[error.code] || "Could not get your location."));
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  });
+}
+
+function showUserOnMap({ lat, lng, accuracy }) {
+  const position = [lat, lng];
+
+  if (userMarker) {
+    userMarker.setLatLng(position);
+    accuracyCircle.setLatLng(position).setRadius(accuracy);
+  } else {
+    accuracyCircle = L.circle(position, {
+      radius: accuracy,
+      color: "#1f6fd1",
+      fillOpacity: 0.1,
+      weight: 1,
+      interactive: false
+    }).addTo(campusMap);
+
+    userMarker = L.circleMarker(position, {
+      radius: 8,
+      color: "#fff",
+      weight: 2,
+      fillColor: "#1f6fd1",
+      fillOpacity: 1
+    })
+      .bindPopup('<div class="map-popup"><strong>You are here</strong></div>')
+      .addTo(campusMap);
+  }
+
+  campusMap.setView(position, 17, { animate: true });
+  userMarker.openPopup();
+}
+
+locateBtn.addEventListener("click", async () => {
+  locateBtn.disabled = true;
+  locationStatus.textContent = "Finding your location…";
+
+  try {
+    state.userLocation = await getUserLocation();
+    calculateMachineDistances(); // Location changed, so recalculate distances
+
+    // Redraw cards and popups with distances (loadData renders them if data isn't loaded yet)
+    if (state.machines.length) render();
+
+    showUserOnMap(state.userLocation);
+    render(); // Re-sort/re-display immediately if distance sorting is selected
+    locationStatus.textContent = `Location found (±${Math.round(state.userLocation.accuracy)} m)`;
+  } catch (error) {
+    locationStatus.textContent = error.message;
+  } finally {
+    locateBtn.disabled = false;
+  }
+});
+
 async function loadData() {
   try {
     const [machineResponse, productResponse] = await Promise.all([
@@ -317,6 +483,8 @@ async function loadData() {
 
     state.machines = parseCSV(csv);
     state.productsByMachine = normalizeProducts(productData);
+    calculateMachineDistances(); // Covers the case where location was found before data loaded
+    updateMachinesByDistance();
     render();
   } catch (error) {
     console.error("Unable to load SnackAttack data:", error);

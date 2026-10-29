@@ -41,3 +41,7 @@ tmp/
 
 # Vercel
 .vercel/
+
+# Playwright test output
+/test-results/
+/playwright-report/
