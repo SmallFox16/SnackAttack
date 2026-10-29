@@ -1,3 +1,5 @@
+import { sortMachinesByDistance } from "./sort-utils.mjs";
+
 /* SnackAttack client application. */
 
 const state = {
@@ -7,13 +9,16 @@ const state = {
   search: "",
   userLocation: null,
   distancesByMachine: new Map(),
-  machinesByDistance: []
+  machinesByDistance: [],
+  sort: "default"
 };
 
 const machineList = document.getElementById("machineList");
 const summary = document.getElementById("summary");
 const search = document.getElementById("search");
 const filters = document.getElementById("filters");
+const sortSelect = document.getElementById("sortSelect");
+const sortHint = document.getElementById("sortHint");
 
 const campusMap = L.map("campus-map").setView([36.3035, -82.37], 16);
 
@@ -273,6 +278,10 @@ function productMarkup(machineId) {
 function machineCard(machine) {
   const id = `details-${machine.ID}`;
   const availability = machine.Availability || "Unknown";
+  const distance = state.distancesByMachine.get(String(machine.ID));
+  const distanceText = Number.isFinite(distance)
+    ? `${distance < 1000 ? `${Math.round(distance)} m` : `${(distance / 1000).toFixed(2)} km`} away`
+    : "Distance unavailable";
 
   return `
     <article class="machine-card" data-machine-id="${escapeHTML(machine.ID)}">
@@ -282,6 +291,7 @@ function machineCard(machine) {
             <p class="machine-number">Machine #${escapeHTML(machine.ID)}</p>
             <h2>${escapeHTML(machine.Building)}</h2>
             <span class="machine-type">${escapeHTML(machine.Type)} machine</span>
+            <span class="machine-distance">${escapeHTML(distanceText)}</span>
             <button class="show-map-btn" type="button" data-machine-id="${escapeHTML(machine.ID)}">
               Show on map
             </button>
@@ -339,8 +349,31 @@ function filteredMachines() {
   });
 }
 
-function render() {
+function displayedMachines() {
   const machines = filteredMachines();
+  return state.sort === "distance"
+    ? sortMachinesByDistance(machines, state.distancesByMachine)
+    : machines;
+}
+
+function updateSortAvailability() {
+  const distanceOption = sortSelect.querySelector('option[value="distance"]');
+  const hasLocation = Boolean(state.userLocation);
+  distanceOption.disabled = !hasLocation;
+
+  if (!hasLocation && state.sort === "distance") {
+    state.sort = "default";
+    sortSelect.value = "default";
+  }
+
+  sortHint.textContent = hasLocation
+    ? "Distance sorting is available."
+    : "Use your location to enable nearest-to-farthest sorting.";
+}
+
+function render() {
+  updateSortAvailability();
+  const machines = displayedMachines();
   summary.textContent = `${machines.length} of ${state.machines.length} machine${state.machines.length === 1 ? "" : "s"} shown`;
   renderMarkers(machines);
 
@@ -367,6 +400,11 @@ filters.addEventListener("click", (event) => {
 
 search.addEventListener("input", (event) => {
   state.search = event.target.value;
+  render();
+});
+
+sortSelect.addEventListener("change", (event) => {
+  state.sort = event.target.value;
   render();
 });
 
@@ -476,6 +514,7 @@ locateBtn.addEventListener("click", async () => {
     calculateMachineDistances(); // Location changed, so recalculate distances
     updateMachinesByDistance();
     showUserOnMap(state.userLocation);
+    render(); // Re-sort/re-display immediately if distance sorting is selected
     locationStatus.textContent = `Location found (±${Math.round(state.userLocation.accuracy)} m)`;
   } catch (error) {
     locationStatus.textContent = error.message;
