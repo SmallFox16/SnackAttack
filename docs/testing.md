@@ -74,6 +74,34 @@ File: `tests/distance.test.js` — covers [`distance.js`](distance-calculation-d
 
 Current result: **13/13 passing**, ESLint clean.
 
+## Community reports tests
+
+File: `tests/forum-utils.test.mjs` covers [`forum-utils.mjs`](forum-design.md). The tests follow the [unit testing standard](unit-test-standard.md): each test checks one behavior, has labeled Arrange / Act / Assert steps, and uses mock data only.
+
+| Function | Behaviors tested (one test each) | Scenario type |
+|---|---|---|
+| `REPORT_CATEGORIES` | Lists the four story categories · cannot be changed at runtime | Normal |
+| `categoryLabel` | Allowed key → label · unknown/missing key → `null` · inherited property (`toString`) → `null` | Normal, invalid input, **edge** |
+| `normalizeReport` | Valid report cleaned up · no machine ID · blank/non-text description · unknown category · missing/unparseable date · non-object input · `javascript:`/`data:` image dropped (report kept) · relative image path kept · no image → `null` · missing ID generated | Normal, **missing data**, **invalid input**, **security** |
+| `normalizeReports` | Newest first · invalid reports left out · same date keeps original order · no reports → `[]` · malformed data (`{}`, `null`, non-array) → `[]` | Normal, **boundary**, **empty data**, **error handling** |
+| `filterReportsByMachine` | Selected machine only · numeric ID matches string ID · `"all"`/blank keeps all · machine with no reports → `[]` | Normal, **edge**, **empty result** |
+| `machineLabel` | Known machine → "Brinkley Drink machine (#1)" · unknown ID → "Machine #7" | Normal, **missing data** |
+| `formatReportDate` | Readable date (time zone pinned to UTC so it repeats on any machine) · invalid date → `Date unknown` | Normal, **invalid input** |
+| `escapeHTML` | Markup escaped · `null` → `""` | **Security**, **missing data** |
+
+File: `tests/csv-utils.test.mjs` covers the CSV parser shared by `app.js` and `forum.js`. There is one test for each of: header mapping, quoted commas, doubled quotes, CRLF line endings, blank rows, and empty input.
+
+### Not unit tested, and why
+
+The unit testing standard (section 5) asks us to name code that can't reasonably be unit tested:
+
+- **`forum.js`**: it reads the page (`document`), fetches files over HTTP, and writes HTML into the page as soon as it loads. It can't run in Node without a browser. All of its decisions (validation, sorting, filtering, labels, dates, escaping) are in `forum-utils.mjs` and tested above. What's left is loading data and inserting HTML, which is covered by:
+  - `tests/accessibility.spec.js`, which loads `forum.html` in Chromium and runs axe (WCAG 2.1 A/AA)
+  - the manual mobile checklist below
+- **`styles.css` / `forum.html`**: static markup and styling, which section 1 of the standard says does not need unit tests.
+
+Current result: **53/53 unit tests passing**, ESLint clean, 2/2 accessibility tests passing.
+
 ## Manual test checklist (mobile)
 
 Run on a phone (iOS Safari and/or Android Chrome) against the deployed preview or a local server reached over the network. Geolocation only works on **HTTPS** or `localhost`, so test on the Vercel preview URL.
@@ -86,6 +114,10 @@ Run on a phone (iOS Safari and/or Android Chrome) against the deployed preview o
 - [ ] After the location is found, machines with GPS show `📍 N ft away` (or `mi`) on the card and in the map popup (**Show on map**).
 - [ ] Machines without GPS show `📍 Distance unavailable`.
 - [ ] Distance text fits on the card at phone width without overflowing.
+- [ ] The header nav shows **Machine finder** and **Community reports**; tapping each goes to that page, and the current page is highlighted gold.
+- [ ] The **Community reports** page shows "No reports yet…" when `reports.json` is empty.
+- [ ] With reports present, cards show the machine, category badge, description, and submitted date, newest first, with no horizontal scrolling.
+- [ ] **Filter by machine** narrows the list; a machine with no reports shows "No reports for this machine yet."
 
 To check the raw distances in meters, run `state.distancesByMachine` in the browser console after the location is found.
 
