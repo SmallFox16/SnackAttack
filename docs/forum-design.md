@@ -101,8 +101,9 @@ These parts of the user story are for later tasks:
 
 ## Testing
 
-- `tests/forum-utils.test.mjs` covers category lookup, report validation (missing fields, unknown category, invalid date, non-object input, unsafe image URLs), sorting, empty or malformed data, machine filtering, machine labels, date formatting, and HTML escaping.
-- `tests/csv-utils.test.mjs` covers the shared CSV parser.
+- `tests/forum-utils.test.mjs` has 30 one-behavior tests, following [`unit-test-standard.md`](unit-test-standard.md). They cover category lookup, report validation (missing fields, unknown category, invalid date, non-object input, unsafe image URLs), sorting (including two reports with the same date), empty or malformed data, machine filtering, machine labels, date formatting, and HTML escaping.
+- `tests/csv-utils.test.mjs` has 6 tests for the shared CSV parser.
+- `forum.js` is not unit tested because it needs a browser. [`testing.md`](testing.md#not-unit-tested-and-why) explains why and what covers it instead.
 - `tests/accessibility.spec.js` runs axe (WCAG 2.1 A/AA) against `forum.html` as well as the home page.
 
 See [`testing.md`](testing.md) for the test table and the mobile checklist.

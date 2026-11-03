@@ -76,30 +76,31 @@ Current result: **13/13 passing**, ESLint clean.
 
 ## Community reports tests
 
-File: `tests/forum-utils.test.mjs` covers [`forum-utils.mjs`](forum-design.md).
+File: `tests/forum-utils.test.mjs` covers [`forum-utils.mjs`](forum-design.md). The tests follow the [unit testing standard](unit-test-standard.md): each test checks one behavior, has labeled Arrange / Act / Assert steps, and uses mock data only.
 
-| Test | Checks | Why |
+| Function | Behaviors tested (one test each) | Scenario type |
 |---|---|---|
-| `REPORT_CATEGORIES` has the four story categories | Exact keys; object is frozen | Categories come from the acceptance criteria and must not change at runtime |
-| `categoryLabel` | Known key → label; unknown key, `toString`, `undefined` → `null` | **Failure case:** inherited object properties must not count as categories |
-| `normalizeReport` keeps a valid report | Trims description, stringifies `machineId`, normalizes the date | Normal case |
-| `normalizeReport` rejects missing required fields | Blank/missing machine ID, blank/non-string description, missing date → `null` | **Failure case:** bad records are skipped, not rendered |
-| `normalizeReport` rejects unknown category and invalid date | `"vandalism"`, `"not a date"` → `null` | **Failure case** |
-| `normalizeReport` rejects non-object input | `null`, a string → `null` | **Edge case** |
-| `normalizeReport` drops unsafe image URLs | `javascript:` and `data:` → `null`; relative path kept; report itself kept | **Security:** user data never reaches `<img src>` unchecked |
-| `normalizeReport` builds a missing ID | `<machineId>-<timestamp>` | **Edge case** |
-| `normalizeReports` sorts newest first and drops invalid | Order `new, mid, old`; invalid record removed | Display order from the design |
-| `normalizeReports` handles empty/malformed data | `{reports: []}`, `{}`, `null`, `{reports: "oops"}` → `[]` | **Edge case:** drives the "No reports yet" empty state |
-| `filterReportsByMachine` | `"all"`/blank keep everything; numeric ID matches string ID; unknown ID → `[]` | **Edge case:** filter that matches nothing |
-| `machineLabel` | Known machine → "Brinkley Drink machine (#1)"; unknown ID → "Machine #7" | **Failure case:** report for a machine missing from the CSV |
-| `formatReportDate` | UTC date → `Nov 3, 2026, 3:05 PM`; garbage → `Date unknown` | **Failure case** |
-| `escapeHTML` | Tags, quotes, `&` escaped; `null` → `""` | **Security:** report text cannot inject HTML |
+| `REPORT_CATEGORIES` | Lists the four story categories · cannot be changed at runtime | Normal |
+| `categoryLabel` | Allowed key → label · unknown/missing key → `null` · inherited property (`toString`) → `null` | Normal, invalid input, **edge** |
+| `normalizeReport` | Valid report cleaned up · no machine ID · blank/non-text description · unknown category · missing/unparseable date · non-object input · `javascript:`/`data:` image dropped (report kept) · relative image path kept · no image → `null` · missing ID generated | Normal, **missing data**, **invalid input**, **security** |
+| `normalizeReports` | Newest first · invalid reports left out · same date keeps original order · no reports → `[]` · malformed data (`{}`, `null`, non-array) → `[]` | Normal, **boundary**, **empty data**, **error handling** |
+| `filterReportsByMachine` | Selected machine only · numeric ID matches string ID · `"all"`/blank keeps all · machine with no reports → `[]` | Normal, **edge**, **empty result** |
+| `machineLabel` | Known machine → "Brinkley Drink machine (#1)" · unknown ID → "Machine #7" | Normal, **missing data** |
+| `formatReportDate` | Readable date (time zone pinned to UTC so it repeats on any machine) · invalid date → `Date unknown` | Normal, **invalid input** |
+| `escapeHTML` | Markup escaped · `null` → `""` | **Security**, **missing data** |
 
-File: `tests/csv-utils.test.mjs` covers the CSV parser shared by `app.js` and `forum.js`: header mapping, quoted commas, escaped quotes, CRLF, blank rows, and empty input.
+File: `tests/csv-utils.test.mjs` covers the CSV parser shared by `app.js` and `forum.js`. There is one test for each of: header mapping, quoted commas, doubled quotes, CRLF line endings, blank rows, and empty input.
 
-`tests/accessibility.spec.js` runs axe against both `index.html` and `forum.html`.
+### Not unit tested, and why
 
-Current result: **34/34 unit tests passing**, ESLint clean, 2/2 accessibility tests passing.
+The unit testing standard (section 5) asks us to name code that can't reasonably be unit tested:
+
+- **`forum.js`**: it reads the page (`document`), fetches files over HTTP, and writes HTML into the page as soon as it loads. It can't run in Node without a browser. All of its decisions (validation, sorting, filtering, labels, dates, escaping) are in `forum-utils.mjs` and tested above. What's left is loading data and inserting HTML, which is covered by:
+  - `tests/accessibility.spec.js`, which loads `forum.html` in Chromium and runs axe (WCAG 2.1 A/AA)
+  - the manual mobile checklist below
+- **`styles.css` / `forum.html`**: static markup and styling, which section 1 of the standard says does not need unit tests.
+
+Current result: **53/53 unit tests passing**, ESLint clean, 2/2 accessibility tests passing.
 
 ## Manual test checklist (mobile)
 
