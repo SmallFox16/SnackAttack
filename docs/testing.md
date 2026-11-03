@@ -74,6 +74,33 @@ File: `tests/distance.test.js` — covers [`distance.js`](distance-calculation-d
 
 Current result: **13/13 passing**, ESLint clean.
 
+## Community reports tests
+
+File: `tests/forum-utils.test.mjs` covers [`forum-utils.mjs`](forum-design.md).
+
+| Test | Checks | Why |
+|---|---|---|
+| `REPORT_CATEGORIES` has the four story categories | Exact keys; object is frozen | Categories come from the acceptance criteria and must not change at runtime |
+| `categoryLabel` | Known key → label; unknown key, `toString`, `undefined` → `null` | **Failure case:** inherited object properties must not count as categories |
+| `normalizeReport` keeps a valid report | Trims description, stringifies `machineId`, normalizes the date | Normal case |
+| `normalizeReport` rejects missing required fields | Blank/missing machine ID, blank/non-string description, missing date → `null` | **Failure case:** bad records are skipped, not rendered |
+| `normalizeReport` rejects unknown category and invalid date | `"vandalism"`, `"not a date"` → `null` | **Failure case** |
+| `normalizeReport` rejects non-object input | `null`, a string → `null` | **Edge case** |
+| `normalizeReport` drops unsafe image URLs | `javascript:` and `data:` → `null`; relative path kept; report itself kept | **Security:** user data never reaches `<img src>` unchecked |
+| `normalizeReport` builds a missing ID | `<machineId>-<timestamp>` | **Edge case** |
+| `normalizeReports` sorts newest first and drops invalid | Order `new, mid, old`; invalid record removed | Display order from the design |
+| `normalizeReports` handles empty/malformed data | `{reports: []}`, `{}`, `null`, `{reports: "oops"}` → `[]` | **Edge case:** drives the "No reports yet" empty state |
+| `filterReportsByMachine` | `"all"`/blank keep everything; numeric ID matches string ID; unknown ID → `[]` | **Edge case:** filter that matches nothing |
+| `machineLabel` | Known machine → "Brinkley Drink machine (#1)"; unknown ID → "Machine #7" | **Failure case:** report for a machine missing from the CSV |
+| `formatReportDate` | UTC date → `Nov 3, 2026, 3:05 PM`; garbage → `Date unknown` | **Failure case** |
+| `escapeHTML` | Tags, quotes, `&` escaped; `null` → `""` | **Security:** report text cannot inject HTML |
+
+File: `tests/csv-utils.test.mjs` covers the CSV parser shared by `app.js` and `forum.js`: header mapping, quoted commas, escaped quotes, CRLF, blank rows, and empty input.
+
+`tests/accessibility.spec.js` runs axe against both `index.html` and `forum.html`.
+
+Current result: **34/34 unit tests passing**, ESLint clean, 2/2 accessibility tests passing.
+
 ## Manual test checklist (mobile)
 
 Run on a phone (iOS Safari and/or Android Chrome) against the deployed preview or a local server reached over the network. Geolocation only works on **HTTPS** or `localhost`, so test on the Vercel preview URL.
@@ -86,6 +113,10 @@ Run on a phone (iOS Safari and/or Android Chrome) against the deployed preview o
 - [ ] After the location is found, machines with GPS show `📍 N ft away` (or `mi`) on the card and in the map popup (**Show on map**).
 - [ ] Machines without GPS show `📍 Distance unavailable`.
 - [ ] Distance text fits on the card at phone width without overflowing.
+- [ ] The header nav shows **Machine finder** and **Community reports**; tapping each goes to that page, and the current page is highlighted gold.
+- [ ] The **Community reports** page shows "No reports yet…" when `reports.json` is empty.
+- [ ] With reports present, cards show the machine, category badge, description, and submitted date, newest first, with no horizontal scrolling.
+- [ ] **Filter by machine** narrows the list; a machine with no reports shows "No reports for this machine yet."
 
 To check the raw distances in meters, run `state.distancesByMachine` in the browser console after the location is found.
 

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Community reports about ETSU vending machine issues, pricing, and availability." />
+  <title>Community Reports | SnackAttack</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">S</div>
+        <h1>SnackAttack</h1>
+      </div>
+      <p class="subtitle">See what other students have reported about vending machines around ETSU: machines out of order, products unavailable, and incorrect prices.</p>
+      <nav class="site-nav" aria-label="Main">
+        <a href="./">Machine finder</a>
+        <a href="./forum.html" aria-current="page">Community reports</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="toolbar" aria-labelledby="forumHeading">
+      <div>
+        <h2 id="forumHeading">Community reports</h2>
+        <p class="forum-intro">Reports and updates submitted by SnackAttack users, newest first.</p>
+      </div>
+      <div class="toolbar-top">
+        <div class="field">
+          <label for="machineFilter">Filter by machine</label>
+          <select id="machineFilter" class="forum-select">
+            <option value="all">All machines</option>
+          </select>
+        </div>
+        <div id="reportSummary" class="summary" aria-live="polite">Loading reports…</div>
+      </div>
+    </section>
+
+    <section id="reportList" class="report-list" aria-label="Reports" aria-live="polite"></section>
+  </main>
+
+  <footer>SnackAttack · Sprint 5 vending machine finder</footer>
+
+  <script type="module" src="./forum.js"></script>
+</body>
+</html>

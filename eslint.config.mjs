@@ -1,6 +1,6 @@
 export default [
   {
-    files: ["**/*.js"],
+    files: ["**/*.js", "**/*.mjs"],
     ignores: ["node_modules/**"],
     languageOptions: {
       ecmaVersion: 2022,
@@ -13,7 +13,8 @@ export default [
         Number: "readonly",
         String: "readonly",
         L: "readonly",
-        navigator: "readonly"
+        navigator: "readonly",
+        URL: "readonly"
       }
     },
     rules: {
