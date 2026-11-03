@@ -13,7 +13,8 @@ export default [
         Number: "readonly",
         String: "readonly",
         L: "readonly",
-        navigator: "readonly"
+        navigator: "readonly",
+        setInterval: "readonly",
       }
     },
     rules: {

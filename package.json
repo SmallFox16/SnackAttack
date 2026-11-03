@@ -7,7 +7,8 @@
     "lint": "eslint app.js distance.js tests",
     "lint:fix": "eslint app.js distance.js tests --fix",
     "test": "node --test",
-    "quality": "npm run lint && npm test"
+    "quality": "npm run lint && npm test",
+    "test": "node --test"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
