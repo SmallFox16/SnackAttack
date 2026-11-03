@@ -613,3 +613,142 @@ footer {
     flex-direction: column;
   }
 }
+
+/* ---- Report submission form (forum.html, Task #7) ---- */
+.report-form {
+  display: grid;
+  gap: 16px;
+}
+
+.form-field {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form-field legend {
+  margin-bottom: 7px;
+  padding: 0;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.optional {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.radio-row {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--navy);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.radio-option:has(input:checked) {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.radio-option input {
+  margin: 0;
+  accent-color: var(--gold);
+}
+
+.forum-textarea,
+.forum-file {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+.forum-textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.forum-textarea:focus-visible,
+.forum-file:focus-visible,
+.radio-option:has(input:focus-visible),
+.submit-btn:focus-visible {
+  outline: 3px solid rgba(253, 181, 21, 0.45);
+  outline-offset: 2px;
+}
+
+[aria-invalid="true"],
+.category-options[data-invalid="true"] .radio-option {
+  border-color: var(--unavailable-fg);
+}
+
+.field-hint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.field-error {
+  margin: 6px 0 0;
+  color: var(--unavailable-fg);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.form-actions {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.submit-btn {
+  min-height: 44px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--navy);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.submit-btn:hover {
+  background: var(--navy-2);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.form-status {
+  margin: 0;
+  font-weight: 700;
+}
+
+.form-status.success { color: var(--available-fg); }
+.form-status.error { color: var(--unavailable-fg); }
+
+.report-form-section {
+  margin-bottom: 22px;
+}

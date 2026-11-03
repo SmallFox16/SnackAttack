@@ -14,7 +14,7 @@
         <div class="brand-mark" aria-hidden="true">S</div>
         <h1>SnackAttack</h1>
       </div>
-      <p class="subtitle">See what other students have reported about vending machines around ETSU: machines out of order, products unavailable, and incorrect prices.</p>
+      <p class="subtitle">See and share reports about vending machines around ETSU: machines out of order, products unavailable, and incorrect prices.</p>
       <nav class="site-nav" aria-label="Main">
         <a href="./">Machine finder</a>
         <a href="./forum.html" aria-current="page">Community reports</a>
@@ -23,6 +23,48 @@
   </header>
 
   <main>
+    <section class="toolbar report-form-section" aria-labelledby="submitHeading">
+      <div>
+        <h2 id="submitHeading">Submit a report</h2>
+        <p class="forum-intro">Tell other students about a machine issue, an unavailable product, or a wrong price.</p>
+      </div>
+
+      <form id="reportForm" class="report-form" novalidate>
+        <div class="form-field">
+          <label for="reportMachine">Machine</label>
+          <select id="reportMachine" name="machineId" class="forum-select" required aria-describedby="reportMachineError">
+            <option value="">Choose a machine</option>
+          </select>
+          <p id="reportMachineError" class="field-error" hidden></p>
+        </div>
+
+        <fieldset class="form-field category-options" aria-describedby="reportCategoryError">
+          <legend>Category</legend>
+          <div id="reportCategories" class="radio-row"></div>
+          <p id="reportCategoryError" class="field-error" hidden></p>
+        </fieldset>
+
+        <div class="form-field">
+          <label for="reportDescription">Description</label>
+          <textarea id="reportDescription" name="description" class="forum-textarea" rows="4" maxlength="1000" required aria-describedby="reportDescriptionCount reportDescriptionError"></textarea>
+          <p id="reportDescriptionCount" class="field-hint">0 / 1000 characters</p>
+          <p id="reportDescriptionError" class="field-error" hidden></p>
+        </div>
+
+        <div class="form-field">
+          <label for="reportImage">Photo <span class="optional">(optional)</span></label>
+          <input id="reportImage" name="image" type="file" class="forum-file" accept="image/jpeg,image/png,image/webp" aria-describedby="reportImageHint reportImageError" />
+          <p id="reportImageHint" class="field-hint">JPEG, PNG, or WebP, up to 4 MB.</p>
+          <p id="reportImageError" class="field-error" hidden></p>
+        </div>
+
+        <div class="form-actions">
+          <button id="reportSubmit" class="submit-btn" type="submit">Submit report</button>
+          <p id="reportFormStatus" class="form-status" role="status"></p>
+        </div>
+      </form>
+    </section>
+
     <section class="toolbar" aria-labelledby="forumHeading">
       <div>
         <h2 id="forumHeading">Community reports</h2>
