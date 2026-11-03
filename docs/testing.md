@@ -141,7 +141,7 @@ Run on a phone (iOS Safari and/or Android Chrome) against the deployed preview o
 - [ ] **Photo** opens the phone's camera/photo picker. A JPEG/PNG/WebP under 4 MB submits; a larger photo shows "Photos must be 4 MB or smaller."
 - [ ] After a successful submit, "Thanks! Your report was submitted…" appears, the form clears, and the new report is at the top of the list with its photo.
 - [ ] Reloading the page (or opening it on another device) still shows the new report.
-- [ ] `forum.html?machine=2` opens with machine #2 already selected in the form.
+- [ ] `/forum?machine=2` opens with machine #2 already selected in the form.
 
 To check the raw distances in meters, run `state.distancesByMachine` in the browser console after the location is found.
 
