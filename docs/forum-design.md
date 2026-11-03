@@ -35,7 +35,7 @@ Both pages share a header nav (`<nav class="site-nav" aria-label="Main">`):
 
 The link for the current page has `aria-current="page"`, which is styled gold. On Vercel, `cleanUrls` serves `forum.html` at `/forum`, and `/forum.html` redirects there.
 
-`?machine=<ID>` pre-selects that machine in the submit form, so other pages can link straight to "report this machine". On Vercel, link to **`/forum?machine=<ID>`**. The `cleanUrls` redirect from `/forum.html` to `/forum` drops the query string, so `/forum.html?machine=<ID>` loses the machine. `forum.html?machine=<ID>` only works on a plain static server.
+`?machine=<ID>` pre-selects that machine in the submit form, so other pages can link straight to "report this machine". Link to **`/forum?machine=<ID>`**. On the deployed site, `/forum.html?machine=<ID>` also works because Vercel's `cleanUrls` redirect keeps the query string. Locally, `vercel dev` drops the query string on that redirect, so only `/forum?machine=<ID>` works there.
 
 ## Shared styles
 
