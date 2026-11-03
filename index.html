@@ -502,6 +502,76 @@
   }
 .location-row .show-map-btn { margin-top: 0; }
 .location-status { color: var(--muted); font-size: 0.9rem; }
+      /* Hidden on screen but read by screen readers (skip if you already have this class) */
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* IoT stock feed panel */
+    .iot-panel { margin-top: 22px; }
+    .iot-panel h2 { margin: 0; color: var(--navy); font-size: 1.2rem; }
+    .iot-intro { margin: 0; color: var(--muted); }
+
+    .iot-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .iot-field { flex: 1 1 200px; }
+    .iot-field.iot-qty { flex: 0 0 110px; }
+
+    .iot-form select,
+    .iot-form input {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 13px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .iot-form .show-map-btn { margin-top: 0; min-height: 44px; }
+    .iot-form .show-map-btn[aria-pressed="true"] { background: var(--navy); color: #fff; }
+
+    .iot-form select:focus-visible,
+    .iot-form input:focus-visible {
+      outline: 3px solid rgba(253, 181, 21, 0.45);
+      outline-offset: 2px;
+    }
+
+    .iot-error { margin: 0; color: var(--unavailable-fg); font-weight: 700; }
+    .iot-error:empty { display: none; }
+
+    .iot-log-heading { margin: 0; color: var(--navy); font-size: 1rem; }
+
+    .iot-log {
+      margin: 0;
+      padding-left: 22px;
+      color: #3d4754;
+      font-size: 0.9rem;
+      display: grid;
+      gap: 4px;
+    }
+
+    .iot-log .iot-log-empty { list-style: none; margin-left: -22px; color: var(--muted); font-style: italic; }
+    .iot-log .iot-log-rejected { color: var(--unavailable-fg); }
+    .iot-log time { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+
+    .product-row.stock-flash { animation: stock-flash 1.2s ease; }
+    @keyframes stock-flash { from { background: #fff6dc; } to { background: #fff; } }
+    @media (prefers-reduced-motion: reduce) { .product-row.stock-flash { animation: none; } }
   </style>
 </head>
 <body>
@@ -555,11 +625,359 @@
     </section>
 
     <section id="machineList" class="machine-grid" aria-live="polite"></section>
+        <section id="iotPanel" class="toolbar iot-panel" aria-labelledby="iotHeading">
+      <h2 id="iotHeading">IoT stock feed</h2>
+      <p class="iot-intro">
+        Vending machines report stock levels, and product availability above updates automatically.
+        Use this simulator to send a reading the same way a machine would.
+      </p>
+      <form id="iotForm" class="iot-form" novalidate>
+        <div class="iot-field">
+          <label for="iotMachine">Machine</label>
+          <select id="iotMachine" required></select>
+        </div>
+        <div class="iot-field">
+          <label for="iotProduct">Product</label>
+          <input id="iotProduct" type="text" list="iotProductList" autocomplete="off" required />
+          <datalist id="iotProductList"></datalist>
+        </div>
+        <div class="iot-field iot-qty">
+          <label for="iotQty">Quantity</label>
+          <input id="iotQty" type="number" min="0" max="99" step="1" value="5" inputmode="numeric" required />
+        </div>
+        <button type="submit" class="show-map-btn">Send reading</button>
+        <button type="button" id="iotAuto" class="show-map-btn" aria-pressed="false">Start auto-simulation</button>
+      </form>
+      <p id="iotError" class="iot-error" role="alert"></p>
+      <h3 class="iot-log-heading">Recent readings</h3>
+      <ol id="iotLog" class="iot-log"><li class="iot-log-empty">No readings yet.</li></ol>
+    </section>
+
+    <div id="stockAnnouncer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   </main>
 
   <footer>SnackAttack · Sprint 4 vending machine finder</footer>
 
   <script src="./distance.js" defer></script>
   <script type="module" src="./app.js"></script>
+    <script>
+  (() => {
+    "use strict";
+
+    const IOT_FEED_URL = null;          // e.g. "/api/stock-feed" when a real device feed exists
+    const POLL_MS = 15000;              // how often to poll IOT_FEED_URL
+    const SIM_MS = 8000;                // auto-simulation interval
+    const LOW_STOCK = 2;                // "Low stock" at or below this count
+    const MAX_QTY = 99;
+    const LOG_LIMIT = 8;
+    const STORAGE_KEY = "snackattack.iotStock.v1";
+
+    const $ = (id) => document.getElementById(id);
+    const norm = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const numberOf = (s) => (String(s ?? "").match(/\d+/) || [null])[0];
+
+    // ---------- Stock store (latest reading per machine + product) ----------
+    let stock = loadStock();
+
+    function loadStock() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+      catch { return {}; }
+    }
+    function saveStock() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stock)); } catch { /* storage unavailable */ }
+    }
+    const stockKey = (machineId, product) => `${norm(machineId)}|${norm(product)}`;
+
+    // ---------- Reading the cards app.js renders ----------
+    let list;
+
+    function cardInfo(card) {
+      return {
+        card,
+        name: card.querySelector("h2")?.textContent.trim() || "",
+        number: card.querySelector(".machine-number")?.textContent.trim() || "",
+        explicit: card.dataset.machineId || card.dataset.id || card.id || ""
+      };
+    }
+    const allCards = () => [...list.querySelectorAll(".machine-card")].map(cardInfo);
+
+    function findCard(machineId) {
+      const n = norm(machineId);
+      if (!n) return null;
+      const cards = allCards();
+      const exact = cards.find((c) => [c.explicit, c.number, c.name].some((v) => v && norm(v) === n));
+      if (exact) return exact;
+      // "3", "#3" or "Machine 3" -> match by machine number
+      if (/^(machine|vm|no)?\d+$/.test(n)) {
+        const num = numberOf(machineId);
+        return cards.find((c) => numberOf(c.explicit) === num || numberOf(c.number) === num) || null;
+      }
+      return null;
+    }
+
+    function productRows(card) {
+      return [...card.querySelectorAll(".product-row")];
+    }
+    function findRow(card, product) {
+      const n = norm(product);
+      return productRows(card).find((r) => norm(r.querySelector(".product-name")?.textContent) === n) || null;
+    }
+    const machineLabel = (info, fallback) => info?.name || fallback;
+
+    // ---------- Updating the page ----------
+    function paintRow(row, qty) {
+      const badge = row.querySelector(".product-status");
+      if (!badge) return;
+      const state = qty === 0 ? "unavailable" : "available";
+      const text = qty === 0 ? "Sold out"
+        : qty <= LOW_STOCK ? `Low stock · ${qty} left`
+        : `In stock · ${qty} left`;
+
+      // Only touch the DOM when something changed, so the observer settles.
+      if (badge.textContent !== text) badge.textContent = text;
+      for (const cls of ["available", "unavailable", "unknown"]) {
+        if (badge.classList.contains(cls) !== (cls === state)) badge.classList.toggle(cls, cls === state);
+      }
+      if (row.dataset.stock !== String(qty)) row.dataset.stock = String(qty);
+    }
+
+    let observer = null;
+
+    // Re-apply every stored reading. Runs whenever app.js re-renders the list
+    // (search, filter, sort), so live stock is never overwritten by stale data.
+    function applyAll() {
+      observer?.disconnect();
+      for (const entry of Object.values(stock)) {
+        const info = findCard(entry.machineId);
+        const row = info && findRow(info.card, entry.product);
+        if (row) paintRow(row, entry.quantity);
+      }
+      observer?.observe(list, { childList: true, subtree: true });
+      refreshForm();
+    }
+
+    let scheduled = false;
+    function scheduleApply() {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => { scheduled = false; applyAll(); });
+    }
+
+    // ---------- Receiving readings ----------
+    function validate(raw) {
+      if (!raw || typeof raw !== "object") return { error: "reading must be an object" };
+      const machineId = String(raw.machineId ?? raw.machine ?? "").trim();
+      const product = String(raw.product ?? raw.productName ?? "").trim();
+      const quantity = typeof raw.quantity === "string" && raw.quantity.trim() !== ""
+        ? Number(raw.quantity) : raw.quantity;
+      const timestamp = raw.timestamp ?? new Date().toISOString();
+
+      if (!machineId || machineId.length > 100) return { error: "missing or invalid machine" };
+      if (!product || product.length > 100) return { error: "missing or invalid product" };
+      if (!Number.isInteger(quantity) || quantity < 0 || quantity > MAX_QTY) {
+        return { error: `quantity must be a whole number from 0 to ${MAX_QTY}` };
+      }
+      if (Number.isNaN(Date.parse(timestamp))) return { error: "invalid timestamp" };
+      return { machineId, product, quantity, timestamp: new Date(timestamp).toISOString() };
+    }
+
+    function receive(raw, { announceIt = true } = {}) {
+      const msg = validate(raw);
+      if (msg.error) {
+        log(`Rejected reading: ${msg.error}.`, true);
+        return { ok: false, error: msg.error };
+      }
+
+      // Store each machine under one canonical name, however the device referred to it.
+      const info = findCard(msg.machineId);
+      if (info) msg.machineId = machineValue(info);
+      const row = info && findRow(info.card, msg.product);
+      if (row) msg.product = row.querySelector(".product-name").textContent.trim();
+
+      const key = stockKey(msg.machineId, msg.product);
+      const prev = stock[key];
+      if (prev && Date.parse(prev.timestamp) > Date.parse(msg.timestamp)) {
+        log(`Ignored an older reading for ${msg.product}.`);
+        return { ok: false, error: "stale reading" };
+      }
+
+      stock[key] = msg;
+      saveStock();
+
+      const where = machineLabel(info, msg.machineId);
+      applyAll();
+
+      const text = msg.quantity === 0
+        ? `${msg.product} is now sold out at ${where}.`
+        : `${msg.product} at ${where}: ${msg.quantity} left.`;
+
+      if (row) {
+        row.classList.remove("stock-flash");
+        void row.offsetWidth;            // restart the highlight animation
+        row.classList.add("stock-flash");
+        if (announceIt) announce(text);
+        log(text);
+      } else {
+        // Saved anyway: it shows up once that machine/product is on screen.
+        log(`${text} (Not shown with the current search or filter.)`);
+      }
+      return { ok: true, reading: msg };
+    }
+
+    // ---------- Announcements and log ----------
+    let announceTimer;
+    function announce(text) {
+      const region = $("stockAnnouncer");
+      region.textContent = "";
+      clearTimeout(announceTimer);
+      announceTimer = setTimeout(() => { region.textContent = text; }, 60);
+    }
+
+    function log(text, rejected = false) {
+      const ol = $("iotLog");
+      ol.querySelector(".iot-log-empty")?.remove();
+      const li = document.createElement("li");
+      if (rejected) li.className = "iot-log-rejected";
+      const now = new Date();
+      const time = document.createElement("time");
+      time.dateTime = now.toISOString();
+      time.textContent = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+      li.append(time, document.createTextNode(text));
+      ol.prepend(li);
+      while (ol.children.length > LOG_LIMIT) ol.lastElementChild.remove();
+    }
+
+    // ---------- Simulator form ----------
+    function machineValue(info) {
+      return info.explicit || info.number || info.name;
+    }
+
+    function refreshForm() {
+      const select = $("iotMachine");
+      const current = select.value;
+      const cards = allCards();
+      const signature = cards.map(machineValue).join("\n");
+
+      if (select.dataset.signature !== signature) {
+        select.dataset.signature = signature;
+        select.replaceChildren();
+        if (!cards.length) {
+          select.append(new Option("No machines shown", "", true, true));
+          select.disabled = true;
+        } else {
+          select.disabled = false;
+          for (const info of cards) {
+            const label = info.number && info.name ? `${info.name} (${info.number})` : (info.name || info.number);
+            select.append(new Option(label, machineValue(info)));
+          }
+          if ([...select.options].some((o) => o.value === current)) select.value = current;
+        }
+      }
+      refreshProducts();
+    }
+
+    function refreshProducts() {
+      const info = findCard($("iotMachine").value);
+      const names = info
+        ? productRows(info.card).map((r) => r.querySelector(".product-name")?.textContent.trim()).filter(Boolean)
+        : [];
+      const datalist = $("iotProductList");
+      const signature = names.join("\n");
+      if (datalist.dataset.signature !== signature) {
+        datalist.dataset.signature = signature;
+        datalist.replaceChildren(...names.map((n) => new Option(n)));
+      }
+    }
+
+    function onSubmit(event) {
+      event.preventDefault();
+      const error = $("iotError");
+      const qtyText = $("iotQty").value.trim();
+      const result = receive({
+        machineId: $("iotMachine").value,
+        product: $("iotProduct").value,
+        quantity: qtyText === "" ? NaN : Number(qtyText)
+      });
+      if (result.ok) {
+        error.textContent = "";
+      } else {
+        error.textContent = `Reading not sent: ${result.error}.`;
+        const field = /machine/.test(result.error) ? "iotMachine"
+          : /product/.test(result.error) ? "iotProduct" : "iotQty";
+        $(field).focus();
+      }
+    }
+
+    // Auto-simulation: a random machine reports a random product's count.
+    let simTimer = null;
+    function simulateOnce() {
+      const withProducts = allCards().filter((c) => productRows(c.card).length);
+      if (!withProducts.length) return;
+      const info = withProducts[Math.floor(Math.random() * withProducts.length)];
+      const rows = productRows(info.card);
+      const row = rows[Math.floor(Math.random() * rows.length)];
+      receive({
+        machineId: machineValue(info),
+        product: row.querySelector(".product-name").textContent.trim(),
+        quantity: Math.random() < 0.25 ? 0 : Math.floor(Math.random() * 10) + 1
+      }, { announceIt: false });   // avoid a screen-reader announcement every few seconds
+    }
+
+    function toggleAuto() {
+      const btn = $("iotAuto");
+      const on = !simTimer;
+      if (on) {
+        simulateOnce();
+        simTimer = setInterval(simulateOnce, SIM_MS);
+      } else {
+        clearInterval(simTimer);
+        simTimer = null;
+      }
+      btn.setAttribute("aria-pressed", String(on));
+      btn.textContent = on ? "Stop auto-simulation" : "Start auto-simulation";
+      announce(on ? "Auto-simulation started." : "Auto-simulation stopped.");
+    }
+
+    // ---------- Real device feed (optional) ----------
+    async function pollFeed() {
+      try {
+        const res = await fetch(IOT_FEED_URL, { headers: { Accept: "application/json" }, cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const readings = Array.isArray(data) ? data : data.readings || [];
+        readings.forEach((r) => receive(r));
+      } catch (err) {
+        log(`Could not reach the IoT feed (${err.message}).`, true);
+      }
+    }
+
+    // ---------- Start ----------
+    function init() {
+      list = $("machineList");
+      observer = new MutationObserver(scheduleApply);
+      observer.observe(list, { childList: true, subtree: true });
+
+      $("iotForm").addEventListener("submit", onSubmit);
+      $("iotMachine").addEventListener("change", refreshProducts);
+      $("iotAuto").addEventListener("click", toggleAuto);
+      window.addEventListener("snackattack:iot", (e) => receive(e.detail));
+
+      if (IOT_FEED_URL) {
+        pollFeed();
+        setInterval(pollFeed, POLL_MS);
+      }
+      applyAll();
+    }
+
+    window.SnackAttackIoT = {
+      receive,
+      getStock: () => JSON.parse(JSON.stringify(stock)),
+      clear() { stock = {}; saveStock(); log("Stored stock readings cleared."); }
+    };
+
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+    else init();
+  })();
+  </script>
 </body>
 </html>
