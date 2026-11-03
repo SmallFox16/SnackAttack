@@ -14,6 +14,7 @@ export default [
         String: "readonly",
         L: "readonly",
         navigator: "readonly",
+        setInterval: "readonly",
         URL: "readonly"
       }
     },
