@@ -1,5 +1,5 @@
 import { sortMachinesByDistance } from "./sort-utils.mjs";
-import { startSimulatedSensor, storeSensorMessage } from "./iot-sensor.mjs";
+import { applySensorMessage, startSimulatedSensor, storeSensorMessage } from "./iot-sensor.mjs";
 import { parseCSV } from "./csv-utils.mjs";
 
 /* SnackAttack client application. */
@@ -214,7 +214,7 @@ function machineCard(machine) {
           </div>
           <div class="detail-item">
             <strong>Machine availability</strong>
-            <span>${displayValue(availability)}</span>
+            <span class="machine-availability">${displayValue(availability)}</span>
           </div>
           <div class="detail-item">
             <strong>Payment</strong>
@@ -429,20 +429,61 @@ locateBtn.addEventListener("click", async () => {
 
 
 /* ---- Simulated IoT sensor (Task #4) ----
- * Message format, validation, and the simulator live in iot-sensor.mjs so they can be unit tested.
+ * Message format, validation, the simulator, and applying stock updates live in
+ * iot-sensor.mjs so they can be unit tested.
  */
 let sensorTimer = null; // Interval ID, kept so the sensor can't be started twice
 
 /**
- * Starts the simulated sensor once machines have loaded. Each message is
- * validated and stored in state.sensorMessages. Does not update the UI.
+ * Shows a new status on a badge or label. Skips unchanged text so the
+ * aria-live machine list only announces real changes.
+ */
+function updateStatusText(element, status, baseClass) {
+  if (!element || element.textContent === status) return;
+
+  element.textContent = status;
+  if (baseClass) element.className = `${baseClass} ${statusClass(status)}`;
+}
+
+/**
+ * Updates one machine's card in place. A full render() would collapse open
+ * details panels and close map popups every time a sensor reported.
+ * Machines hidden by the current filters have no card; render() shows their
+ * latest values when they reappear.
+ */
+function updateMachineCard(machine) {
+  const card = document.getElementById(`details-${machine.ID}`)?.closest(".machine-card");
+  if (!card) return;
+
+  updateStatusText(card.querySelector(".status"), machine.Availability, "status");
+  updateStatusText(card.querySelector(".machine-availability"), machine.Availability);
+
+  // Rows are drawn in the same order as the machine's product list
+  const products = state.productsByMachine.get(String(machine.ID)) || [];
+  card.querySelectorAll(".product-status").forEach((element, index) => {
+    updateStatusText(element, products[index].availability || "Unknown", "product-status");
+  });
+}
+
+/**
+ * Handles one sensor message: rejects it if malformed, keeps it as the latest
+ * reading for its machine, then applies it to the stock shown on the page.
+ */
+function handleSensorMessage(message) {
+  if (!storeSensorMessage(state.sensorMessages, message)) return;
+
+  const changedMachine = applySensorMessage(state.machines, state.productsByMachine, message);
+  if (changedMachine) updateMachineCard(changedMachine);
+}
+
+/**
+ * Starts the simulated sensor once machines have loaded. Each message goes
+ * through handleSensorMessage, so the cards update as readings arrive.
  */
 function startSensor() {
   if (sensorTimer || !state.machines.length) return;
 
-  sensorTimer = startSimulatedSensor(state.machines, state.productsByMachine, (message) => {
-    storeSensorMessage(state.sensorMessages, message);
-  });
+  sensorTimer = startSimulatedSensor(state.machines, state.productsByMachine, handleSensorMessage);
 }
 
 
