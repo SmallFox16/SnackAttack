@@ -100,7 +100,7 @@ The unit testing standard (section 5) asks us to name code that can't reasonably
 - **`forum.js`**: it reads the page (`document`), fetches files over HTTP, and writes HTML into the page as soon as it loads. It can't run in Node without a browser. All of its decisions (validation, sorting, filtering, labels, dates, escaping) are in `forum-utils.mjs` and tested above. What's left is loading data and inserting HTML, which is covered by:
   - `tests/accessibility.spec.js`, which loads `forum.html` in Chromium and runs axe (WCAG 2.1 A/AA)
   - the manual mobile checklist below
-- **`updateMachineCard` and `handleSensorMessage` in `app.js`**: `app.js` needs the page and Leaflet as soon as it loads, so it can't run in Node. The stock logic they call is in `iot-sensor.mjs` and tested above. What's left is writing the new values into the machine's card.
+- **`updateMachineCard` and `handleSensorMessage` in `app.js`**: `app.js` needs the page and Leaflet as soon as it loads, so it can't run in Node. The stock logic they call is in `iot-sensor.mjs` and tested above. What's left is writing the new values into the machine's card. That is covered by `tests/integration/iot-stock-updates.spec.js`, which runs in a browser.
 - **`styles.css` / `forum.html`**: static markup and styling, which section 1 of the standard says does not need unit tests.
 
 Current result: **53/53 unit tests passing**, ESLint clean, 2/2 accessibility tests passing.
