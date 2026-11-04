@@ -102,6 +102,10 @@ The unit testing standard (section 5) asks us to name code that can't reasonably
 
 Current result: **53/53 unit tests passing**, ESLint clean, 2/2 accessibility tests passing.
 
+## Integration tests
+
+New code must also follow the [integration testing standard](integration-test-standard.md), which covers when integration tests are required, how to write and run them, and the pull request checklist.
+
 ## Manual test checklist (mobile)
 
 Run on a phone (iOS Safari and/or Android Chrome) against the deployed preview or a local server reached over the network. Geolocation only works on **HTTPS** or `localhost`, so test on the Vercel preview URL.
@@ -123,5 +127,5 @@ To check the raw distances in meters, run `state.distancesByMachine` in the brow
 
 ## Known gaps
 
-- No automated browser/UI tests; UI behavior is checked manually using the checklist above.
+- Existing UI behavior has no automated browser tests yet and is checked manually using the checklist above. New code follows the integration testing standard.
 - `parseGPS` treats a blank coordinate part as `0` — see [`bug-parsegps-blank-coordinate.md`](bug-parsegps-blank-coordinate.md). There is no test for this yet because it documents current behavior that is expected to change.
