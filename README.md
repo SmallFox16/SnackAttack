@@ -23,12 +23,13 @@ SnackAttack is a lightweight web application for finding vending machines around
 ```text
 SnackAttack/
 ├── .github/workflows/
-│   ├── accessibility.yml           # axe accessibility check (home + forum pages)
+│   ├── accessibility.yml           # axe accessibility check and integration tests
 │   └── quality.yml                 # Pull-request quality check (ESLint + unit tests)
 ├── docs/
 │   ├── bug-parsegps-blank-coordinate.md  # Open bug: blank GPS part parsed as 0
 │   ├── distance-calculation-design.md  # Distance calculation design
 │   ├── forum-design.md             # Community reports: data model, storage, display
+│   ├── integration-test-standard.md  # Integration test procedure for new code
 │   ├── linting.md                  # Linting standard and usage
 │   ├── product-pricing-design.md   # Product pricing/availability design
 │   └── testing.md                  # Testing standard, test inventory, mobile checklist
