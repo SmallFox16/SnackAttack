@@ -4,8 +4,8 @@
   "private": true,
   "description": "ETSU vending machine finder",
   "scripts": {
-    "lint": "eslint app.js distance.js tests",
-    "lint:fix": "eslint app.js distance.js tests --fix",
+    "lint": "eslint app.js distance.js forum.js forum-utils.mjs csv-utils.mjs sort-utils.mjs report-validation.mjs reports-api.mjs api tests",
+    "lint:fix": "eslint app.js distance.js forum.js forum-utils.mjs csv-utils.mjs sort-utils.mjs report-validation.mjs reports-api.mjs api tests --fix",
     "test": "node --test",
     "quality": "npm run lint && npm test"
   },
@@ -14,5 +14,8 @@
     "@playwright/test": "^1.64.1",
     "eslint": "^9.0.0",
     "wait-on": "^9.5.1"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.2"
   }
 }

@@ -1,6 +1,6 @@
 export default [
   {
-    files: ["**/*.js"],
+    files: ["**/*.js", "**/*.mjs"],
     ignores: ["node_modules/**"],
     languageOptions: {
       ecmaVersion: 2022,
@@ -13,7 +13,8 @@ export default [
         Number: "readonly",
         String: "readonly",
         L: "readonly",
-        navigator: "readonly"
+        navigator: "readonly",
+        URL: "readonly"
       }
     },
     rules: {
@@ -24,6 +25,32 @@ export default [
       "eqeqeq": ["error", "always"],
       "curly": ["error", "multi-line"],
       "prefer-const": "error"
+    }
+  },
+  {
+    // forum.js builds form submissions and reads ?machine= from the page URL
+    files: ["forum.js"],
+    languageOptions: {
+      globals: {
+        FormData: "readonly",
+        URLSearchParams: "readonly",
+        window: "readonly"
+      }
+    }
+  },
+  {
+    // Server code (Vercel Function) and its unit tests run in Node with web-standard Request/Response
+    files: ["api/**/*.mjs", "reports-api.mjs", "tests/**/*.test.mjs"],
+    languageOptions: {
+      globals: {
+        Buffer: "readonly",
+        File: "readonly",
+        FormData: "readonly",
+        Request: "readonly",
+        Response: "readonly",
+        crypto: "readonly",
+        process: "readonly"
+      }
     }
   },
   {

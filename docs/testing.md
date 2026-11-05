@@ -74,9 +74,59 @@ File: `tests/distance.test.js` — covers [`distance.js`](distance-calculation-d
 
 Current result: **13/13 passing**, ESLint clean.
 
+## Community reports tests
+
+File: `tests/forum-utils.test.mjs` covers [`forum-utils.mjs`](forum-design.md). The tests follow the [unit testing standard](unit-test-standard.md): each test checks one behavior, has labeled Arrange / Act / Assert steps, and uses mock data only.
+
+| Function | Behaviors tested (one test each) | Scenario type |
+|---|---|---|
+| `REPORT_CATEGORIES` | Lists the four story categories · cannot be changed at runtime | Normal |
+| `categoryLabel` | Allowed key → label · unknown/missing key → `null` · inherited property (`toString`) → `null` | Normal, invalid input, **edge** |
+| `normalizeReport` | Valid report cleaned up · no machine ID · blank/non-text description · unknown category · missing/unparseable date · non-object input · `javascript:`/`data:` image dropped (report kept) · relative image path kept · no image → `null` · missing ID generated | Normal, **missing data**, **invalid input**, **security** |
+| `normalizeReports` | Newest first · invalid reports left out · same date keeps original order · no reports → `[]` · malformed data (`{}`, `null`, non-array) → `[]` | Normal, **boundary**, **empty data**, **error handling** |
+| `filterReportsByMachine` | Selected machine only · numeric ID matches string ID · `"all"`/blank keeps all · machine with no reports → `[]` | Normal, **edge**, **empty result** |
+| `machineLabel` | Known machine → "Brinkley Drink machine (#1)" · unknown ID → "Machine #7" | Normal, **missing data** |
+| `formatReportDate` | Readable date (time zone pinned to UTC so it repeats on any machine) · invalid date → `Date unknown` | Normal, **invalid input** |
+| `escapeHTML` | Markup escaped · `null` → `""` | **Security**, **missing data** |
+
+File: `tests/csv-utils.test.mjs` covers the CSV parser shared by `app.js` and `forum.js`. There is one test for each of: header mapping, quoted commas, doubled quotes, CRLF line endings, blank rows, and empty input.
+
+## Report submission tests (Task #7)
+
+File: `tests/report-validation.test.mjs` covers [`report-validation.mjs`](forum-design.md#how-reports-are-submitted), which is shared by the form and the server.
+
+| Function | Behaviors tested (one test each) | Scenario type |
+|---|---|---|
+| `validateReportFields` | Complete report → no errors · fields trimmed · numeric machine ID accepted · machine required · unknown machine rejected · category required · unlisted category rejected · blank description rejected · exactly 1,000 characters accepted · 1,001 rejected · every invalid field reported at once · `undefined` input doesn't throw | Normal, **missing data**, **invalid input**, **boundary**, **error handling** |
+| `validateImageMeta` | JPEG/PNG/WebP accepted · GIF rejected · no type rejected · empty file rejected · exactly 4 MB accepted · 4 MB + 1 byte rejected | Normal, **invalid input**, **boundary** |
+| `detectImageType` | JPEG, PNG, and WebP recognized from their first bytes · renamed `.exe` rejected · RIFF file that isn't WebP (WAV) rejected · too-short data or `null` rejected | Normal, **invalid input**, **security**, **edge** |
+
+File: `tests/reports-api.test.mjs` covers the `GET`/`POST` handlers in `reports-api.mjs`. It uses an **in-memory mock store** instead of Vercel Blob, plus a fixed date and ID, so it needs no network or credentials and gives the same result every run.
+
+| Handler | Behaviors tested (one test each) | Scenario type |
+|---|---|---|
+| `GET` | Returns stored reports · sends `Cache-Control: no-store` · storage failure → 500 | Normal, **error handling** |
+| `POST` | Valid report → 201 and saved under `reports/<id>.json` · server sets `submittedAt` (a user-sent date is ignored) · valid PNG stored under `report-images/<id>.png` and its URL saved · invalid fields → 400 with field errors, nothing saved · GIF → 400 · text file sent as `image/png` → 400 · non-form body → 400 · report save fails → 500 · photo upload fails → 500 and no report saved · machine list can't load → 500 | Normal, **invalid input**, **security**, **error handling** |
+
+### Not unit tested, and why
+
+The unit testing standard (section 5) asks us to name code that can't reasonably be unit tested:
+
+- **`forum.js`**: it reads the page (`document`), fetches files over HTTP, and writes HTML into the page as soon as it loads. It can't run in Node without a browser. All of its decisions (validation, sorting, filtering, labels, dates, escaping, form rules) are in `forum-utils.mjs` and `report-validation.mjs` and are tested above. What's left is wiring the form and the list to the page, which is covered by:
+  - `tests/accessibility.spec.js`, which loads `forum.html` (including the form) in Chromium and runs axe (WCAG 2.1 A/AA)
+  - the manual mobile checklist below
+- **The Blob adapter in `api/reports.mjs`** (`listReports`, `saveImage`, `saveReport`): these are thin calls to `@vercel/blob`. Testing them would mean testing a third-party library or calling a live service, and the standard (section 4) says to avoid both. The handler logic they plug into is fully tested with the mock store. They are checked on the Vercel preview deployment by submitting a real report.
+- **`styles.css` / `forum.html`**: static markup and styling, which section 1 of the standard says does not need unit tests.
+
+Current result: **90/90 unit tests passing**, ESLint clean, 2/2 accessibility tests passing.
+
+## Integration tests
+
+New code must also follow the [integration testing standard](integration-test-standard.md), which covers when integration tests are required, how to write and run them, and the pull request checklist.
+
 ## Manual test checklist (mobile)
 
-Run on a phone (iOS Safari and/or Android Chrome) against the deployed preview or a local server reached over the network. Geolocation only works on **HTTPS** or `localhost`, so test on the Vercel preview URL.
+Run on a phone (iOS Safari and/or Android Chrome) against the deployed preview or a local server reached over the network. Report submission needs the API and Blob storage, so test it on the Vercel preview or with `vercel dev`. Geolocation only works on **HTTPS** or `localhost`, so test on the Vercel preview URL.
 
 - [ ] Page loads; machine list and map appear with no console errors.
 - [ ] Tap **📍 Use my location** and allow permission: a user marker appears and the status shows `Location found (±N m)`.
@@ -86,10 +136,20 @@ Run on a phone (iOS Safari and/or Android Chrome) against the deployed preview o
 - [ ] After the location is found, machines with GPS show `📍 N ft away` (or `mi`) on the card and in the map popup (**Show on map**).
 - [ ] Machines without GPS show `📍 Distance unavailable`.
 - [ ] Distance text fits on the card at phone width without overflowing.
+- [ ] The header nav shows **Machine finder** and **Community reports**; tapping each goes to that page, and the current page is highlighted gold.
+- [ ] The **Community reports** page shows "No reports yet…" when no reports have been submitted.
+- [ ] With reports present, cards show the machine, category badge, description, and submitted date, newest first, with no horizontal scrolling.
+- [ ] **Filter by machine** narrows the list; a machine with no reports shows "No reports for this machine yet."
+- [ ] Tapping **Submit report** with nothing filled in shows an error under Machine, Category, and Description, and moves focus to Machine.
+- [ ] The category buttons wrap onto separate lines and are easy to tap. The description counter updates as you type.
+- [ ] **Photo** opens the phone's camera/photo picker. A JPEG/PNG/WebP under 4 MB submits; a larger photo shows "Photos must be 4 MB or smaller."
+- [ ] After a successful submit, "Thanks! Your report was submitted…" appears, the form clears, and the new report is at the top of the list with its photo.
+- [ ] Reloading the page (or opening it on another device) still shows the new report.
+- [ ] `/forum?machine=2` opens with machine #2 already selected in the form.
 
 To check the raw distances in meters, run `state.distancesByMachine` in the browser console after the location is found.
 
 ## Known gaps
 
-- No automated browser/UI tests; UI behavior is checked manually using the checklist above.
+- Existing UI behavior has no automated browser tests yet and is checked manually using the checklist above. New code follows the integration testing standard.
 - `parseGPS` treats a blank coordinate part as `0` — see [`bug-parsegps-blank-coordinate.md`](bug-parsegps-blank-coordinate.md). There is no test for this yet because it documents current behavior that is expected to change.
