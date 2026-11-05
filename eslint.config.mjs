@@ -29,6 +29,32 @@ export default [
     }
   },
   {
+    // forum.js builds form submissions and reads ?machine= from the page URL
+    files: ["forum.js"],
+    languageOptions: {
+      globals: {
+        FormData: "readonly",
+        URLSearchParams: "readonly",
+        window: "readonly"
+      }
+    }
+  },
+  {
+    // Server code (Vercel Function) and its unit tests run in Node with web-standard Request/Response
+    files: ["api/**/*.mjs", "reports-api.mjs", "tests/**/*.test.mjs"],
+    languageOptions: {
+      globals: {
+        Buffer: "readonly",
+        File: "readonly",
+        FormData: "readonly",
+        Request: "readonly",
+        Response: "readonly",
+        crypto: "readonly",
+        process: "readonly"
+      }
+    }
+  },
+  {
     // app.js uses the helpers that distance.js defines as browser globals
     files: ["app.js"],
     languageOptions: {
