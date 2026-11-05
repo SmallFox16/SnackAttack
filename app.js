@@ -1,5 +1,4 @@
 import { sortMachinesByDistance } from "./sort-utils.mjs";
-import { startSimulatedSensor, storeSensorMessage } from "./iot-sensor.mjs";
 import { parseCSV } from "./csv-utils.mjs";
 
 /* SnackAttack client application. */
@@ -15,8 +14,7 @@ const state = {
   userLocation: null,
   distancesByMachine: new Map(),
   machinesByDistance: [],
-  sort: "default",
-  sensorMessages: new Map()
+  sort: "default"
 };
 
 const machineList = document.getElementById("machineList");
@@ -427,25 +425,6 @@ locateBtn.addEventListener("click", async () => {
   }
 });
 
-
-/* ---- Simulated IoT sensor (Task #4) ----
- * Message format, validation, and the simulator live in iot-sensor.mjs so they can be unit tested.
- */
-let sensorTimer = null; // Interval ID, kept so the sensor can't be started twice
-
-/**
- * Starts the simulated sensor once machines have loaded. Each message is
- * validated and stored in state.sensorMessages. Does not update the UI.
- */
-function startSensor() {
-  if (sensorTimer || !state.machines.length) return;
-
-  sensorTimer = startSimulatedSensor(state.machines, state.productsByMachine, (message) => {
-    storeSensorMessage(state.sensorMessages, message);
-  });
-}
-
-
 async function loadData() {
   try {
     const [machineResponse, productResponse] = await Promise.all([
@@ -466,7 +445,6 @@ async function loadData() {
     calculateMachineDistances(); // Covers the case where location was found before data loaded
     updateMachinesByDistance();
     render();
-    startSensor();
   } catch (error) {
     console.error("Unable to load SnackAttack data:", error);
     summary.textContent = "Unable to load data";
