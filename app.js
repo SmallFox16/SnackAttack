@@ -1,7 +1,6 @@
 import { sortMachinesByDistance } from "./sort-utils.mjs";
 import { applySensorMessage, startSimulatedSensor, storeSensorMessage } from "./iot-sensor.mjs";
 import { parseCSV } from "./csv-utils.mjs";
-import { formatLastUpdated } from "./iot-display.mjs";
 
 /* SnackAttack client application. */
 
@@ -106,39 +105,15 @@ function statusClass(status = "Unknown") {
   return "unknown";
 }
 
-/**
- * Builds a map pin for a machine. Out-of-service machines get a grayed-out pin
- * so their status is visible on the map (Task #2).
- */
-function machineIcon(type, availability = "Unknown") {
+function machineIcon(type) {
   const typeClass = type.toLowerCase().replaceAll(" ", "-");
-  const serviceClass = statusClass(availability) === "unavailable" ? " out-of-service" : "";
-
   return L.divIcon({
     className: "",
-    html: `<div class="machine-marker ${escapeHTML(typeClass)}${serviceClass}"><span>${markerEmoji[type] || "🛒"}</span></div>`,
+    html: `<div class="machine-marker ${escapeHTML(typeClass)}"><span>${markerEmoji[type] || "🛒"}</span></div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 32],
     popupAnchor: [0, -30]
   });
-}
-
-/**
- * Builds a machine's map popup. Kept in one place so renderMarkers() and live
- * sensor updates produce the same popup, including the current status (Task #2).
- */
-function popupMarkup(machine) {
-  const distance = distanceLabel(machine.ID);
-  const availability = machine.Availability || "Unknown";
-
-  return `
-    <div class="map-popup">
-      <strong>${escapeHTML(machine.Building)} · ${escapeHTML(machine.Type)}</strong>
-      <span class="status popup-status ${statusClass(availability)}">${escapeHTML(availability)}</span>
-      ${distance ? `<span class="popup-distance">${distance}</span>` : ""}
-      ${displayValue(machine.Payment)}<br />
-      ${displayValue(machine.Directions)}
-    </div>`;
 }
 
 function renderMarkers(machines) {
@@ -149,11 +124,18 @@ function renderMarkers(machines) {
     const position = parseGPS(machine.GPS);
     if (!position) return;
 
+    const distance = distanceLabel(machine.ID);
     const marker = L.marker(position, {
-      icon: machineIcon(machine.Type, machine.Availability),
+      icon: machineIcon(machine.Type),
       title: `${machine.Building} ${machine.Type} machine`
     })
-      .bindPopup(popupMarkup(machine))
+      .bindPopup(`
+        <div class="map-popup">
+          <strong>${escapeHTML(machine.Building)} · ${escapeHTML(machine.Type)}</strong>
+          ${distance ? `<span class="popup-distance">${distance}</span>` : ""}
+          ${displayValue(machine.Payment)}<br />
+          ${displayValue(machine.Directions)}
+        </div>`)
       .addTo(markerLayer);
 
     markersByMachineId.set(String(machine.ID), marker);
@@ -211,7 +193,6 @@ function machineCard(machine) {
             <h2>${escapeHTML(machine.Building)}</h2>
             <span class="machine-type">${escapeHTML(machine.Type)} machine</span>
             ${distance ? `<p class="machine-distance">📍 ${distance}</p>` : ""}
-            <p class="last-updated" aria-live="off">${escapeHTML(lastUpdatedText(machine.ID))}</p>
             <button class="show-map-btn" type="button" data-machine-id="${escapeHTML(machine.ID)}">
               Show on map
             </button>
@@ -446,132 +427,63 @@ locateBtn.addEventListener("click", async () => {
   }
 });
 
-/* ---- Simulated IoT sensor (Tasks #4, #3, #2) ----
+
+/* ---- Simulated IoT sensor (Task #4) ----
  * Message format, validation, the simulator, and applying stock updates live in
- * iot-sensor.mjs; display helpers live in iot-display.mjs so they can be unit tested.
+ * iot-sensor.mjs so they can be unit tested.
  */
 let sensorTimer = null; // Interval ID, kept so the sensor can't be started twice
-const LAST_UPDATED_REFRESH_MS = 30000; // How often "Updated X ago" labels are refreshed
-
-/**
- * Returns the "last updated" label for a machine's card, based on its
- * latest sensor message (Task #2).
- */
-function lastUpdatedText(machineId) {
-  const message = state.sensorMessages.get(String(machineId));
-  return message ? formatLastUpdated(message.timestamp) : "No sensor reading yet";
-}
-
-/**
- * Finds a machine's card on the page, or null if it's hidden by the filters.
- */
-function findMachineCard(machineId) {
-  return document.getElementById(`details-${machineId}`)?.closest(".machine-card") || null;
-}
 
 /**
  * Shows a new status on a badge or label. Skips unchanged text so the
  * aria-live machine list only announces real changes.
- *
- * @returns {boolean} True if the status actually changed (used to highlight it).
  */
 function updateStatusText(element, status, baseClass) {
-  if (!element || element.textContent === status) return false;
+  if (!element || element.textContent === status) return;
 
   element.textContent = status;
   if (baseClass) element.className = `${baseClass} ${statusClass(status)}`;
-  return true;
-}
-
-/**
- * Plays a highlight animation on an element (Task #2). If the animation is
- * already running, it restarts so back-to-back updates are still visible.
- */
-function playHighlight(element, className) {
-  element.classList.remove(className);
-  element.getBoundingClientRect(); // Forces the browser to notice the removal so the animation restarts
-  element.classList.add(className);
-  element.addEventListener("animationend", () => element.classList.remove(className), { once: true });
 }
 
 /**
  * Updates one machine's card in place. A full render() would collapse open
  * details panels and close map popups every time a sensor reported.
- * Changed badges pop and the card glows so users can see what changed (Task #2).
  * Machines hidden by the current filters have no card; render() shows their
  * latest values when they reappear.
  */
 function updateMachineCard(machine) {
-  const card = findMachineCard(machine.ID);
+  const card = document.getElementById(`details-${machine.ID}`)?.closest(".machine-card");
   if (!card) return;
 
-  const changedBadges = [];
-
-  const statusBadge = card.querySelector(".status");
-  if (updateStatusText(statusBadge, machine.Availability, "status")) changedBadges.push(statusBadge);
+  updateStatusText(card.querySelector(".status"), machine.Availability, "status");
   updateStatusText(card.querySelector(".machine-availability"), machine.Availability);
 
   // Rows are drawn in the same order as the machine's product list
   const products = state.productsByMachine.get(String(machine.ID)) || [];
   card.querySelectorAll(".product-status").forEach((element, index) => {
-    const availability = products[index]?.availability || "Unknown";
-    if (updateStatusText(element, availability, "product-status")) changedBadges.push(element);
-  });
-
-  changedBadges.forEach((badge) => playHighlight(badge, "iot-changed"));
-  if (changedBadges.length) playHighlight(card, "iot-updated");
-}
-
-/**
- * Updates a machine's map pin and popup to match its current status (Task #2).
- * setPopupContent also refreshes a popup that's currently open.
- */
-function updateMachineMarker(machine) {
-  const marker = markersByMachineId.get(String(machine.ID));
-  if (!marker) return;
-
-  marker.setIcon(machineIcon(machine.Type, machine.Availability));
-  marker.setPopupContent(popupMarkup(machine));
-}
-
-/**
- * Refreshes every visible card's "Updated X ago" label so the times stay accurate.
- */
-function refreshLastUpdatedLabels() {
-  machineList.querySelectorAll(".machine-card").forEach((card) => {
-    const label = card.querySelector(".last-updated");
-    if (label) label.textContent = lastUpdatedText(card.dataset.machineId);
+    updateStatusText(element, products[index].availability || "Unknown", "product-status");
   });
 }
 
 /**
  * Handles one sensor message: rejects it if malformed, keeps it as the latest
- * reading for its machine, applies it to the stock, then updates the card and map.
+ * reading for its machine, then applies it to the stock shown on the page.
  */
 function handleSensorMessage(message) {
   if (!storeSensorMessage(state.sensorMessages, message)) return;
 
   const changedMachine = applySensorMessage(state.machines, state.productsByMachine, message);
-  if (changedMachine) {
-    updateMachineCard(changedMachine);
-    updateMachineMarker(changedMachine);
-  }
-
-  // Every valid reading refreshes the label, even when nothing changed
-  const label = findMachineCard(message.machineId)?.querySelector(".last-updated");
-  if (label) label.textContent = lastUpdatedText(message.machineId);
+  if (changedMachine) updateMachineCard(changedMachine);
 }
 
 /**
  * Starts the simulated sensor once machines have loaded. Each message goes
- * through handleSensorMessage, so the cards and map update as readings arrive.
- * Also starts refreshing the "Updated X ago" labels.
+ * through handleSensorMessage, so the cards update as readings arrive.
  */
 function startSensor() {
   if (sensorTimer || !state.machines.length) return;
 
   sensorTimer = startSimulatedSensor(state.machines, state.productsByMachine, handleSensorMessage);
-  setInterval(refreshLastUpdatedLabels, LAST_UPDATED_REFRESH_MS); // Keep "Updated X ago" labels current
 }
 
 
