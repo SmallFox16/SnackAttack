@@ -18,7 +18,7 @@
   <header>
     <div class="header-inner">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">S</div>
+        <div class="brand-mark" aria-hidden="true" alt="SnackAttack logo">S</div>
         <h1>SnackAttack</h1>
       </div>
       <p class="subtitle">Find vending machines around ETSU and quickly check machine type, machine availability, product prices, product availability, location details, and directions.</p>
@@ -34,7 +34,7 @@
       <div class="toolbar-top">
         <div class="field">
           <label for="search">Search by building</label>
-          <input id="search" type="search" placeholder="Try Brinkley or Sam-Wilson" autocomplete="off" />
+          <input id="search" type="search" placeholder="Try Brinkley or Sam-Wilson" autocomplete="off" alt="Search bar for searching vending machines." />
         </div>
         <div id="summary" class="summary" aria-live="polite">Loading vending machines…</div>
       </div>
@@ -42,15 +42,15 @@
       <div>
         <label>Filter by machine type</label>
         <div id="filters" class="filter-row" role="group" aria-label="Filter vending machines by type">
-          <button class="filter-btn active" type="button" data-type="All" aria-pressed="true">All</button>
-          <button class="filter-btn" type="button" data-type="Drink" aria-pressed="false">Drink</button>
-          <button class="filter-btn" type="button" data-type="Snack" aria-pressed="false">Snack</button>
-          <button class="filter-btn" type="button" data-type="Personal Care" aria-pressed="false">Personal Care</button>
+          <button class="filter-btn active" type="button" data-type="All" aria-pressed="true" alt="Button to show all vending machines on map and list.">All</button>
+          <button class="filter-btn" type="button" data-type="Drink" aria-pressed="false" alt="Button to show all drink machines on map and list.">Drink</button>
+          <button class="filter-btn" type="button" data-type="Snack" aria-pressed="false" alt="Button to show all snack machines on map and list.">Snack</button>
+          <button class="filter-btn" type="button" data-type="Personal Care" aria-pressed="false" alt="Button to show all machines with personcal care items on map and list.">Personal Care</button>
         </div>
         <div class="sort-row">
           <div class="sort-field">
             <label for="sortSelect">Sort vending machines</label>
-            <select id="sortSelect">
+            <select id="sortSelect" alt="Dropdown for sorting vending machines by distance">
               <option value="default">Default order</option>
               <option value="distance" disabled>Nearest to farthest</option>
             </select>
@@ -61,7 +61,7 @@
       <section id="campus-map-section">
         <h2>ETSU Vending Machine Map</h2>
           <div class="location-row">
-          <button id="locateBtn" class="show-map-btn" type="button">📍 Use my location</button>
+          <button id="locateBtn" class="show-map-btn" type="button" alt="Button to allow location services">📍 Use my location</button>
           <span id="locationStatus" class="location-status" aria-live="polite"></span>
           </div>
         <div id="campus-map"></div>
@@ -71,7 +71,7 @@
     <section id="machineList" class="machine-grid" aria-live="polite"></section>
   </main>
 
-  <footer>SnackAttack · Sprint 4 vending machine finder</footer>
+  <footer alt="Footer for page.">SnackAttack · Sprint 4 vending machine finder</footer>
 
   <script src="./distance.js" defer></script>
   <script type="module" src="./app.js"></script>

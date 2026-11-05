@@ -220,7 +220,7 @@ function machineCard(machine) {
         </div>
       </div>
 
-      <button class="details-btn" type="button" aria-expanded="false" aria-controls="${id}">
+      <button class="details-btn" type="button" aria-expanded="false" aria-controls="${id}" alt="Button to expand vending machine details.">
         <span>View machine information</span>
         <span class="chevron" aria-hidden="true">⌄</span>
       </button>
