@@ -33,15 +33,4 @@ Messages that don't match this format are rejected by `isValidIoTMessage()`.
 
 ## Where messages go
 
-`storeSensorMessage()` stores the latest message for each machine in `state.sensorMessages` (key: machine ID as a string).
-
-## How messages update stock
-
-After a message is stored, `applySensorMessage()` copies it onto the data the page displays:
-
-- `machineStatus` replaces the machine's `Availability`.
-- Each product's `availability` replaces the value for the product with the same `name` on that machine.
-- Products missing from the message keep their last known value.
-- Products the machine doesn't list in `products.json`, and machines that aren't in `vending_machines.csv`, are ignored.
-
-If anything changed, `updateMachineCard()` in `app.js` updates that machine's card in place, so open details panels and map popups stay open. Updates only last until the page reloads; `vending_machines.csv` and `products.json` are not changed.
+`receiveSensorMessage()` stores the latest message for each machine in `state.sensorMessages` (key: machine ID as a string).

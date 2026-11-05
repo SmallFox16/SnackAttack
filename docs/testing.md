@@ -107,7 +107,6 @@ File: `tests/reports-api.test.mjs` covers the `GET`/`POST` handlers in `reports-
 |---|---|---|
 | `GET` | Returns stored reports · sends `Cache-Control: no-store` · storage failure → 500 | Normal, **error handling** |
 | `POST` | Valid report → 201 and saved under `reports/<id>.json` · server sets `submittedAt` (a user-sent date is ignored) · valid PNG stored under `report-images/<id>.png` and its URL saved · invalid fields → 400 with field errors, nothing saved · GIF → 400 · text file sent as `image/png` → 400 · non-form body → 400 · report save fails → 500 · photo upload fails → 500 and no report saved · machine list can't load → 500 | Normal, **invalid input**, **security**, **error handling** |
-File: `tests/iot-sensor.test.mjs` covers [`iot-sensor.mjs`](iot-message-format.md): the simulated sensor, message validation, storing the latest reading, and applying stock updates with `applySensorMessage` (machine and product changes, unchanged readings, unknown machines and products, machines with no products).
 
 ### Not unit tested, and why
 
@@ -117,7 +116,6 @@ The unit testing standard (section 5) asks us to name code that can't reasonably
   - `tests/accessibility.spec.js`, which loads `forum.html` (including the form) in Chromium and runs axe (WCAG 2.1 A/AA)
   - the manual mobile checklist below
 - **The Blob adapter in `api/reports.mjs`** (`listReports`, `saveImage`, `saveReport`): these are thin calls to `@vercel/blob`. Testing them would mean testing a third-party library or calling a live service, and the standard (section 4) says to avoid both. The handler logic they plug into is fully tested with the mock store. They are checked on the Vercel preview deployment by submitting a real report.
-- **`updateMachineCard` and `handleSensorMessage` in `app.js`**: `app.js` needs the page and Leaflet as soon as it loads, so it can't run in Node. The stock logic they call is in `iot-sensor.mjs` and tested above. What's left is writing the new values into the machine's card. That is covered by `tests/integration/iot-stock-updates.spec.js`, which runs in a browser.
 - **`styles.css` / `forum.html`**: static markup and styling, which section 1 of the standard says does not need unit tests.
 
 Current result: **90/90 unit tests passing**, ESLint clean, 2/2 accessibility tests passing.

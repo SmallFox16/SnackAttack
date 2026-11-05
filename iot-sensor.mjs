@@ -101,39 +101,6 @@ export function storeSensorMessage(messages, message, warn = console.warn) {
 }
 
 /**
- * Updates a machine's availability and its products' stock from a validated
- * sensor message. Products the message doesn't mention keep their last known
- * value, and products the machine doesn't list are ignored.
- *
- * @param {object[]} machines - Machine rows (state.machines); updated in place.
- * @param {Map<string, object[]>} productsByMachine - Products for each machine ID; updated in place.
- * @param {IoTMessage} message - A message that has passed isValidIoTMessage.
- * @returns {object|null} The machine if anything changed, otherwise null.
- */
-export function applySensorMessage(machines, productsByMachine, message) {
-  const machine = machines.find((candidate) => String(candidate.ID) === message.machineId);
-
-  // A sensor can report on a machine that isn't in vending_machines.csv
-  if (!machine) return null;
-
-  let changed = machine.Availability !== message.machineStatus;
-  machine.Availability = message.machineStatus;
-
-  const readings = new Map(message.products.map((product) => [product.name, product.availability]));
-  const products = productsByMachine.get(message.machineId) || [];
-
-  products.forEach((product) => {
-    const availability = readings.get(product.name);
-    if (!availability || availability === product.availability) return;
-
-    product.availability = availability;
-    changed = true;
-  });
-
-  return changed ? machine : null;
-}
-
-/**
  * Starts the simulated sensor. Every intervalMs it picks a random machine,
  * creates a reading for it, and passes the message to onMessage.
  *
