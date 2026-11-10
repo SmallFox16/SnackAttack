@@ -24,7 +24,7 @@ Each vending machine has a sensor that periodically sends a JSON message with it
 |---|---|---|
 | `messageId` | string | Unique ID for the message |
 | `deviceId` | string | ID of the sensor that sent it |
-| `machineId` | string | Matches the `ID` column in `vending_machines.csv` |
+| `machineId` | string | Matches the `ID` column in `vending_machines.csv` (see [machine data format](machine-data-format.md)) |
 | `timestamp` | string | When the reading was taken (ISO 8601, UTC) |
 | `machineStatus` | `"Available"` \| `"Unavailable"` | Whether the machine is working |
 | `products` | array | Each product's `name` and `availability` (`"Available"` \| `"Unavailable"`) |
