@@ -33,7 +33,6 @@ jobs:
           # OAuth token from `claude setup-token` — bills your Claude Pro/Max plan, not the API.
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          track_progress: true
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
