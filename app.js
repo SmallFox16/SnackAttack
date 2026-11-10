@@ -1,5 +1,4 @@
 import { sortMachinesByDistance } from "./sort-utils.mjs";
-import { parseCSV } from "./csv-utils.mjs";
 
 /* SnackAttack client application. */
 
@@ -428,19 +427,19 @@ locateBtn.addEventListener("click", async () => {
 async function loadData() {
   try {
     const [machineResponse, productResponse] = await Promise.all([
-      fetch("./vending_machines.csv", { cache: "no-store" }),
-      fetch("./products.json", { cache: "no-store" })
+      fetch("/api/machines", { cache: "no-store" }),
+      fetch("/api/products", { cache: "no-store" })
     ]);
 
     if (!machineResponse.ok) throw new Error(`Machine data HTTP ${machineResponse.status}`);
     if (!productResponse.ok) throw new Error(`Product data HTTP ${productResponse.status}`);
 
-    const [csv, productData] = await Promise.all([
-      machineResponse.text(),
+    const [machineData, productData] = await Promise.all([
+      machineResponse.json(),
       productResponse.json()
     ]);
 
-    state.machines = parseCSV(csv);
+    state.machines = Array.isArray(machineData.machines) ? machineData.machines : [];
     state.productsByMachine = normalizeProducts(productData);
     calculateMachineDistances(); // Covers the case where location was found before data loaded
     updateMachinesByDistance();
@@ -448,7 +447,7 @@ async function loadData() {
   } catch (error) {
     console.error("Unable to load SnackAttack data:", error);
     summary.textContent = "Unable to load data";
-    machineList.innerHTML = '<div class="error-state">SnackAttack data could not be loaded. Run the site through a web server rather than opening index.html directly.</div>';
+    machineList.innerHTML = '<div class="error-state">SnackAttack data could not be loaded. Run the site with <code>npm start</code> rather than opening index.html directly.</div>';
   }
 }
 

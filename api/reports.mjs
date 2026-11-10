@@ -4,24 +4,9 @@
  * Needs a Blob store connected to the Vercel project (BLOB_READ_WRITE_TOKEN,
  * or BLOB_STORE_ID with OIDC); `vercel env pull` provides it locally.
  */
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { list, put } from "@vercel/blob";
-import { parseCSV } from "../csv-utils.mjs";
 import { createReportHandlers } from "../reports-api.mjs";
-
-let machineIdsPromise = null;
-
-/** Valid machine IDs from vending_machines.csv (bundled via vercel.json includeFiles). */
-function loadMachineIds() {
-  machineIdsPromise ??= readFile(path.join(process.cwd(), "vending_machines.csv"), "utf8")
-    .then((csv) => new Set(parseCSV(csv).map((machine) => String(machine.ID))))
-    .catch((error) => {
-      machineIdsPromise = null; // retry on the next request
-      throw error;
-    });
-  return machineIdsPromise;
-}
+import { loadMachineIds } from "./_machine-data.mjs"; // Valid IDs come from the machine data the API owns
 
 const blobStore = {
   async listReports() {

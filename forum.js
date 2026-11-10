@@ -2,7 +2,6 @@
  * Community reports forum page: lists reports (Task #8) and submits new ones (Task #7).
  * Report logic lives in forum-utils.mjs; submission rules live in report-validation.mjs.
  */
-import { parseCSV } from "./csv-utils.mjs";
 import {
   REPORT_CATEGORIES,
   categoryLabel,
@@ -214,10 +213,12 @@ formDescription.addEventListener("input", updateDescriptionCount);
 form.addEventListener("submit", submitReport);
 
 async function loadMachines() {
-  const response = await fetch("./vending_machines.csv", { cache: "no-store" });
+  const response = await fetch("/api/machines", { cache: "no-store" });
   if (!response.ok) throw new Error(`Machine data HTTP ${response.status}`);
 
-  state.machinesById = new Map(parseCSV(await response.text()).map((machine) => [String(machine.ID), machine]));
+  const { machines } = await response.json();
+  if (!Array.isArray(machines)) throw new Error("Machine data is missing the machines list");
+  state.machinesById = new Map(machines.map((machine) => [String(machine.ID), machine]));
   machineFilter.insertAdjacentHTML("beforeend", machineOptions());
   formMachine.insertAdjacentHTML("beforeend", machineOptions());
   preselectMachineFromUrl();
@@ -238,7 +239,7 @@ async function loadForum() {
   } catch (error) {
     console.error("Unable to load machine data:", error);
     summary.textContent = "Unable to load machines";
-    reportList.innerHTML = '<div class="error-state">Machine data could not be loaded. Run the site with <code>vercel dev</code> rather than opening forum.html directly.</div>';
+    reportList.innerHTML = '<div class="error-state">Machine data could not be loaded. Run the site with <code>npm start</code> rather than opening forum.html directly.</div>';
     formSubmit.disabled = true;
     return;
   }

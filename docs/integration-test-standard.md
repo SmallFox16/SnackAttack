@@ -9,7 +9,7 @@ This standard applies to all new code. It works alongside the [unit testing stan
 
 Add or update an integration test when a change affects how parts of the application connect, including:
 
-- **Data to page:** Loading or displaying `vending_machines.csv`, `products.json`, or `reports.json`.
+- **Data to page:** Loading or displaying data from `/api/machines`, `/api/products`, or `/api/reports`.
 - **Module to page:** Connecting logic from a tested file (such as `iot-sensor.mjs`) to `app.js` or `forum.js`.
 - **User action to result:** Search, filters, sorting, buttons, and expandable details.
 - **Page to page:** Navigation or data shared between `index.html` and `forum.html`.
@@ -61,20 +61,21 @@ import { test, expect } from "@playwright/test";
 
 const SITE = "http://127.0.0.1:4173";
 
-const MACHINES_CSV = [
-  "ID,Building,Type,Availability,GPS,Payment,Directions,Details",
-  '1,Brinkley,Drink,Unknown,"36.305545, -82.371430",Card,,',
-  '2,Sam Wilson,Snack,Unknown,"36.303000, -82.370000",Cash,,'
-].join("\n");
+// Shaped like the GET /api/machines and GET /api/products responses
+const MACHINES = [
+  { ID: "1", Building: "Brinkley", Type: "Drink", Availability: "Unknown", GPS: "36.305545, -82.371430", Payment: "Card", Directions: "", Details: "" },
+  { ID: "2", Building: "Sam Wilson", Type: "Snack", Availability: "Unknown", GPS: "36.303000, -82.370000", Payment: "Cash", Directions: "", Details: "" }
+];
 
 test.beforeEach(async ({ page }) => {
   // Map tiles come from a live service, so block them to keep tests repeatable
   await page.route("https://tile.openstreetmap.org/**", (route) => route.abort());
 });
 
-test("searching by building narrows the machines loaded from the CSV", async ({ page }) => {
+test("searching by building narrows the machines loaded from the API", async ({ page }) => {
   // Arrange
-  await page.route("**/vending_machines.csv", (route) => route.fulfill({ body: MACHINES_CSV }));
+  await page.route("**/api/machines", (route) => route.fulfill({ json: { machines: MACHINES } }));
+  await page.route("**/api/products", (route) => route.fulfill({ json: { products: [] } }));
   await page.goto(SITE);
   await expect(page.locator(".machine-card")).toHaveCount(2);
 
@@ -88,7 +89,8 @@ test("searching by building narrows the machines loaded from the CSV", async ({ 
 
 test("an error message appears when the machine data fails to load", async ({ page }) => {
   // Arrange
-  await page.route("**/vending_machines.csv", (route) => route.fulfill({ status: 500 }));
+  await page.route("**/api/machines", (route) => route.fulfill({ status: 500, json: { error: "Machine data couldn't be loaded." } }));
+  await page.route("**/api/products", (route) => route.fulfill({ json: { products: [] } }));
 
   // Act
   await page.goto(SITE);
@@ -102,7 +104,7 @@ test("an error message appears when the machine data fails to load", async ({ pa
 ## 5. Testing Guidelines
 
 - **Use the real application.** Load the real pages and scripts. Replace only what the test cannot control.
-- **Use test data.** Supply data with `page.route()` so that editing the real CSV or JSON files does not break tests.
+- **Use test data.** Supply API responses with `page.route()` so that editing the files in `data/` does not break tests. Tests that check that the pages and the real API connect (`machine-api.spec.js`) read expected values from the API instead of hard-coding them.
 - **Keep tests repeatable.** Results must not depend on the time, random values, or test order.
 - **Control timers.** Use `page.clock` to move time forward instead of waiting. For example, the simulated sensor reports every 5 seconds.
 - **Control random values.** Replace `Math.random` with `page.addInitScript()` when the result depends on it, as simulated sensor readings do.
@@ -120,21 +122,19 @@ npm install
 npx playwright install chromium
 ```
 
-Start the website in one terminal.
+Start the website and API in one terminal.
 
 macOS or Linux:
 
 ```bash
-python3 -m http.server 4173 --bind 127.0.0.1
+PORT=4173 npm start
 ```
 
-Windows:
+Windows (PowerShell):
 
 ```powershell
-python -c "import http.server as s; s.SimpleHTTPRequestHandler.extensions_map['.mjs'] = 'text/javascript'; s.test(s.SimpleHTTPRequestHandler, port=4173, bind='127.0.0.1')"
+$env:PORT = 4173; npm start
 ```
-
-Use the longer command on Windows because the usual one can send `.mjs` files as plain text. The browser then refuses to run them, and the pages never load their data.
 
 Run the tests in a second terminal:
 

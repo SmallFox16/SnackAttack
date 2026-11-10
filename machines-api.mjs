@@ -8,7 +8,7 @@
  *   GET /api/buildings               buildings that have machines
  *
  * Data loading is passed in, so the handlers can be unit tested with mock data.
- * api/_machine-data.mjs wires them to vending_machines.csv and products.json.
+ * api/_machine-data.mjs wires them to data/vending_machines.csv and data/products.json.
  *
  * loadData(): Promise<{ machines: object[], products: object[] }>
  */
@@ -49,7 +49,7 @@ function findMachine(machines, id) {
  * Groups machines by building, sorted alphabetically by building name.
  * Rows with no building name are skipped.
  *
- * @param {object[]} machines - Machine rows from vending_machines.csv.
+ * @param {object[]} machines - Machine rows from data/vending_machines.csv.
  * @returns {{name: string, machineCount: number, machineIds: string[]}[]} One entry per building.
  */
 export function listBuildings(machines) {

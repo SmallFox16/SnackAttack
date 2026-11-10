@@ -9,8 +9,7 @@ SnackAttack is a lightweight web application for finding vending machines around
 - Display machine-level availability.
 - Expand machine cards for payment, GPS, directions, and notes.
 - Display mapped machines with Leaflet/OpenStreetMap.
-- Load machine records from `vending_machines.csv`.
-- Load product records from `products.json` and join them by machine ID.
+- Load machine and product records from the machine API (`/api/machines`, `/api/products`), which is the only part of the app that reads `data/vending_machines.csv` and `data/products.json`.
 - Display product name, price, and product availability.
 - Preserve unknown/unsurveyed prices as `null` rather than inventing values.
 - Locate the user on the map and calculate the straight-line distance (Haversine, in meters) from the user to each vending machine.
@@ -35,29 +34,49 @@ SnackAttack/
 │   ├── product-pricing-design.md   # Product pricing/availability design
 │   └── testing.md                  # Testing standard, test inventory, mobile checklist
 ├── api/
+│   ├── _machine-data.mjs           # Reads data/ for the API functions (not an endpoint)
+│   ├── buildings.mjs               # Vercel Function: GET /api/buildings
+│   ├── machines.mjs                # Vercel Function: GET /api/machines
+│   ├── products.mjs                # Vercel Function: GET /api/products
 │   └── reports.mjs                 # Vercel Function: GET/POST /api/reports, stored in Vercel Blob
+├── data/                           # Only read by the API
+│   ├── products.json               # Product price/availability data
+│   └── vending_machines.csv        # Machine/location data
+├── scripts/
+│   └── dev-server.mjs              # Local server for the pages and API (npm start)
 ├── app.js                          # Machine finder browser behavior and rendering
-├── csv-utils.mjs                   # CSV parser shared by app.js and forum.js (unit tested)
+├── csv-utils.mjs                   # CSV parser used by the machine API (unit tested)
 ├── distance.js                     # GPS parsing and distance helpers (unit tested)
 ├── eslint.config.mjs               # ESLint configuration
 ├── forum.html                      # Community reports page markup
 ├── forum.js                        # Community reports browser behavior and rendering
 ├── forum-utils.mjs                 # Report validation, sorting, filtering, formatting (unit tested)
 ├── index.html                      # Machine finder markup
+├── machines-api.mjs                # /api/machines, /api/products, /api/buildings handlers (unit tested)
 ├── package.json                    # Node scripts, @vercel/blob, and dev dependencies
-├── products.json                   # Product price/availability data
 ├── report-validation.mjs           # Report form/server validation rules (unit tested)
 ├── reports-api.mjs                 # /api/reports request handlers (unit tested with a mock store)
 ├── sort-utils.mjs                  # Nearest-to-farthest sorting (unit tested)
 ├── styles.css                      # Shared styles for every page
-├── tests/                          # Unit tests (node:test) and Playwright accessibility tests
-├── vending_machines.csv            # Machine/location data
-└── vercel.json                     # Vercel static deployment config
+├── tests/                          # Unit tests (node:test), Playwright accessibility and integration tests
+└── vercel.json                     # Vercel deployment config (bundles data/ with the API functions)
 ```
 
 ## Product Data
 
-`products.json` uses the machine ID from `vending_machines.csv` as `machineId`.
+`data/products.json` uses the machine ID from `data/vending_machines.csv` as `machineId`.
+
+The pages don't read these files. They get the data from the machine API:
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/machines` | `{ machines: [...] }`, every machine |
+| `GET /api/machines?id=3` | `{ machine: {...} }`, or 404 if no machine has that ID |
+| `GET /api/products` | `{ products: [...] }`, every product |
+| `GET /api/products?machineId=3` | `{ products: [...] }` for one machine, or 404 if no machine has that ID |
+| `GET /api/buildings` | `{ buildings: [{ name, machineCount, machineIds }] }` |
+
+To change machine or product data, edit the files in `data/`. The API reads them once per server instance, so restart `npm start` to see changes locally.
 
 Example:
 
@@ -82,13 +101,14 @@ A price that has not been physically verified should remain `null`.
 
 ### Machine finder and forum (read-only)
 
-The pages load CSV data with `fetch()`, so run a local web server:
+The pages load their data from the machine API, so run the local server. It serves the pages and runs the functions in `api/`:
 
 ```bash
-python -m http.server 8000
+npm install
+npm start                       # http://localhost:8000
 ```
 
-Then browse to `http://localhost:8000` (machine finder) or `http://localhost:8000/forum.html` (community reports). With this server, `/api/reports` doesn't exist, so the forum shows "Reports could not be loaded right now" and submitting fails.
+Then browse to `http://localhost:8000` (machine finder) or `http://localhost:8000/forum.html` (community reports). Without Blob credentials, `/api/reports` fails, so the forum shows "Reports could not be loaded right now" and submitting fails. A plain static server such as `python -m http.server` no longer works, because it can't run the API.
 
 ### Full app, including submitting reports
 

@@ -59,7 +59,7 @@ Each stored report (and each item in the `GET /api/reports` response) looks like
 | Field | Set by | Rules |
 |---|---|---|
 | `id` | Server | Random UUID (`crypto.randomUUID()`). Also used as the storage file name. |
-| `machineId` | User | Must be an `ID` from `vending_machines.csv`. Stored as a string. |
+| `machineId` | User | Must be an `ID` from `data/vending_machines.csv`. Stored as a string. |
 | `category` | User | One of the keys in `REPORT_CATEGORIES` below. |
 | `description` | User | Required. 1–1,000 characters after trimming. Line breaks are kept. |
 | `submittedAt` | Server | ISO 8601 UTC time when the server received the report. A date sent by the user is ignored, so reports can't be backdated. |
@@ -82,7 +82,7 @@ Defined once in `forum-utils.mjs` as `REPORT_CATEGORIES`. The form's radio butto
 
 | Field | Input | Notes |
 |---|---|---|
-| Machine | `<select>` filled from `vending_machines.csv` | Pre-selected from `?machine=<ID>` |
+| Machine | `<select>` filled from `GET /api/machines` | Pre-selected from `?machine=<ID>` |
 | Category | Radio buttons generated from `REPORT_CATEGORIES` | Inside a `<fieldset>` with a `<legend>` |
 | Description | `<textarea maxlength="1000">` | Live "N / 1000 characters" counter |
 | Photo (optional) | `<input type="file" accept="image/jpeg,image/png,image/webp">` | Hint: "JPEG, PNG, or WebP, up to 4 MB." |
@@ -100,7 +100,7 @@ When the user submits:
 `POST /api/reports`:
 
 1. Reads the form data. A body that isn't form data → **400**.
-2. Loads the valid machine IDs from `vending_machines.csv`. The file is bundled with the function through `includeFiles` in `vercel.json`, and the result is cached per function instance.
+2. Loads the valid machine IDs with `loadMachineIds()` from `api/_machine-data.mjs`, the same loader the machine API uses. `data/` is bundled with the function through `includeFiles` in `vercel.json`, and the result is cached per function instance.
 3. Validates the fields with `validateReportFields`. The rules are in the table above.
 4. If a photo was chosen:
    - `validateImageMeta` checks the declared type (JPEG, PNG, or WebP) and size (1 byte to 4 MB). Vercel Functions accept request bodies up to 4.5 MB, so 4 MB leaves room for the other fields.
@@ -130,10 +130,10 @@ Reports and photos are stored in a **public Vercel Blob store** connected to the
 
 `forum.js` (browser only) does the following:
 
-1. It fetches `vending_machines.csv`, parses it with `parseCSV` from `csv-utils.mjs` (the same parser `app.js` uses), and fills both machine dropdowns.
+1. It fetches `GET /api/machines` (the same machine API `app.js` uses) and fills both machine dropdowns.
 2. It fetches `GET /api/reports` and runs `normalizeReports` (in `forum-utils.mjs`), which drops any report that fails validation and sorts the rest **newest first**. A malformed record is skipped instead of breaking the page.
 3. It renders one card per report:
-   - machine number and name, e.g. "Brinkley Drink machine (#1)", or "Machine #7" if the ID isn't in the CSV
+   - machine number and name, e.g. "Brinkley Drink machine (#1)", or "Machine #7" if the ID isn't in the machine data
    - category badge
    - description
    - optional photo
@@ -148,11 +148,11 @@ All report text goes through `escapeHTML` before it is inserted, so text a user 
 | No reports yet | "No reports yet. Be the first to submit one using the form above." |
 | A machine filter matches nothing | "No reports for this machine yet." |
 | `GET /api/reports` fails (e.g. storage not connected) | "Reports could not be loaded right now. Please try again later." The form still works. |
-| The machine CSV fails to load | Error card, and the submit button is disabled |
+| `GET /api/machines` fails | Error card, and the submit button is disabled |
 
 ## Known limitations and security trade-offs
 
-- **No user accounts or rate limiting.** Anyone can submit reports, so the forum could be spammed. The limits that do exist are the 1,000-character description cap, the 4 MB photo cap, server-side validation, and checking machine IDs against the CSV. Adding sign-in or rate limiting, for example with Upstash Redis, is a candidate for a later task.
+- **No user accounts or rate limiting.** Anyone can submit reports, so the forum could be spammed. The limits that do exist are the 1,000-character description cap, the 4 MB photo cap, server-side validation, and checking machine IDs against the machine data. Adding sign-in or rate limiting, for example with Upstash Redis, is a candidate for a later task.
 - **No moderation or deletion in the app.** Bad reports can be removed by deleting their files from the Blob store in the Vercel dashboard.
 - **Photos are public** as soon as they're uploaded, and their metadata, such as GPS location in the EXIF data, is not stripped. Users should not upload photos showing people.
 - **Listing reads every report file.** That's fine for hundreds of reports, but see the database note above for growth.

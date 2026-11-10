@@ -4,16 +4,16 @@
   "trailingSlash": false,
   "functions": {
     "api/reports.mjs": {
-      "includeFiles": "vending_machines.csv"
+      "includeFiles": "data/**"
     },
     "api/machines.mjs": {
-      "includeFiles": "{vending_machines.csv,products.json}"
+      "includeFiles": "data/**"
     },
     "api/products.mjs": {
-      "includeFiles": "{vending_machines.csv,products.json}"
+      "includeFiles": "data/**"
     },
     "api/buildings.mjs": {
-      "includeFiles": "{vending_machines.csv,products.json}"
+      "includeFiles": "data/**"
     }
   }
 }

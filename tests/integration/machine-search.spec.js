@@ -2,20 +2,21 @@ import { test, expect } from "@playwright/test";
 
 const SITE = "http://127.0.0.1:4173";
 
-const MACHINES_CSV = [
-  "ID,Building,Type,Availability,GPS,Payment,Directions,Details",
-  '1,Brinkley,Drink,Unknown,"36.305545, -82.371430",Card,,',
-  '2,Sam Wilson,Snack,Unknown,"36.303000, -82.370000",Cash,,'
-].join("\n");
+// Shaped like the GET /api/machines and GET /api/products responses
+const MACHINES = [
+  { ID: "1", Building: "Brinkley", Type: "Drink", Availability: "Unknown", GPS: "36.305545, -82.371430", Payment: "Card", Directions: "", Details: "" },
+  { ID: "2", Building: "Sam Wilson", Type: "Snack", Availability: "Unknown", GPS: "36.303000, -82.370000", Payment: "Cash", Directions: "", Details: "" }
+];
 
 test.beforeEach(async ({ page }) => {
   // Map tiles come from a live service, so block them to keep tests repeatable
   await page.route("https://tile.openstreetmap.org/**", (route) => route.abort());
 });
 
-test("searching by building narrows the machines loaded from the CSV", async ({ page }) => {
+test("searching by building narrows the machines loaded from the API", async ({ page }) => {
   // Arrange
-  await page.route("**/vending_machines.csv", (route) => route.fulfill({ body: MACHINES_CSV }));
+  await page.route("**/api/machines", (route) => route.fulfill({ json: { machines: MACHINES } }));
+  await page.route("**/api/products", (route) => route.fulfill({ json: { products: [] } }));
   await page.goto(SITE);
   await expect(page.locator(".machine-card")).toHaveCount(2);
 
@@ -29,7 +30,8 @@ test("searching by building narrows the machines loaded from the CSV", async ({ 
 
 test("an error message appears when the machine data fails to load", async ({ page }) => {
   // Arrange
-  await page.route("**/vending_machines.csv", (route) => route.fulfill({ status: 500 }));
+  await page.route("**/api/machines", (route) => route.fulfill({ status: 500, json: { error: "Machine data couldn't be loaded." } }));
+  await page.route("**/api/products", (route) => route.fulfill({ json: { products: [] } }));
 
   // Act
   await page.goto(SITE);

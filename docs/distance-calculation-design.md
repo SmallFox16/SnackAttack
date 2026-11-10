@@ -49,7 +49,7 @@ The helpers live in `distance.js` because `app.js` touches the DOM and Leaflet a
 ```text
 "📍 Use my location" ──> getUserLocation() ──> state.userLocation ──┐
                                                                      ├──> calculateMachineDistances()
-vending_machines.csv ──> loadData() ──> state.machines ──────────────┘            │
+GET /api/machines ────> loadData() ──> state.machines ──────────────┘            │
                                                                                   v
                                                      state.distancesByMachine (Map)
                                                        "1" -> 4.99
