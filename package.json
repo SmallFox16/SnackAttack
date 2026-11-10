@@ -5,8 +5,8 @@
   "description": "ETSU vending machine finder",
   "scripts": {
     "start": "node scripts/dev-server.mjs",
-    "lint": "eslint app.js distance.js forum.js forum-utils.mjs csv-utils.mjs sort-utils.mjs report-validation.mjs reports-api.mjs machines-api.mjs api scripts tests",
-    "lint:fix": "eslint app.js distance.js forum.js forum-utils.mjs csv-utils.mjs sort-utils.mjs report-validation.mjs reports-api.mjs machines-api.mjs api scripts tests --fix",
+    "lint": "eslint app.js distance.js forum.js forum-utils.mjs csv-utils.mjs sort-utils.mjs machine-data.mjs report-validation.mjs reports-api.mjs machines-api.mjs api scripts tests",
+    "lint:fix": "eslint app.js distance.js forum.js forum-utils.mjs csv-utils.mjs sort-utils.mjs machine-data.mjs report-validation.mjs reports-api.mjs machines-api.mjs api scripts tests --fix",
     "test": "node --test",
     "quality": "npm run lint && npm test"
   },
