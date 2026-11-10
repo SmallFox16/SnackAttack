@@ -1,0 +1,56 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  claude-review:
+    # Skip drafts and PRs from forks (fork PRs can't read repo secrets).
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code review
+        uses: anthropics/claude-code-action@v1
+        with:
+          # OAuth token from `claude setup-token` — bills your Claude Pro/Max plan, not the API.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request. Use `gh pr diff` and `gh pr view` to see the changes,
+            and read surrounding code in the repo for context.
+
+            Focus on, in order:
+            - Bugs and logic errors
+            - Security issues (secrets, injection, unsafe input handling)
+            - Accessibility problems in UI changes
+            - Performance problems
+            - Readability and consistency with the existing code
+
+            Only flag issues introduced by this PR. Be concise and skip praise.
+            Leave inline comments on specific lines with
+            `mcp__github_inline_comment__create_inline_comment`, then post one
+            short summary comment with `gh pr comment`. If there are no real
+            issues, say so in a single short comment.
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep"
