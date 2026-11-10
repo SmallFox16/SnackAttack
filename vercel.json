@@ -5,6 +5,15 @@
   "functions": {
     "api/reports.mjs": {
       "includeFiles": "vending_machines.csv"
+    },
+    "api/machines.mjs": {
+      "includeFiles": "{vending_machines.csv,products.json}"
+    },
+    "api/products.mjs": {
+      "includeFiles": "{vending_machines.csv,products.json}"
+    },
+    "api/buildings.mjs": {
+      "includeFiles": "{vending_machines.csv,products.json}"
     }
   }
 }
