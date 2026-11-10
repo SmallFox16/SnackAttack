@@ -48,6 +48,19 @@ test("the forum's machine list comes from GET /api/machines", async ({ page, req
   await expect(page.locator("#reportMachine option")).toHaveCount(machines.length + 1);
 });
 
+test("the forum shows an error and disables submitting when GET /api/machines fails", async ({ page }) => {
+  // Arrange
+  await page.route("**/api/machines", (route) => route.fulfill({ status: 500, json: { error: "Machine data couldn't be loaded." } }));
+
+  // Act
+  await page.goto(`${SITE}/forum.html`);
+
+  // Assert
+  await expect(page.locator("#reportList .error-state")).toBeVisible();
+  await expect(page.locator("#reportSummary")).toHaveText("Unable to load machines");
+  await expect(page.locator("#reportSubmit")).toBeDisabled();
+});
+
 test("the old data file URLs are gone, so nothing can load a stale copy", async ({ request }) => {
   // Act
   const machines = await request.get(`${SITE}/vending_machines.csv`);
