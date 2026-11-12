@@ -41,7 +41,6 @@ export default [
   {
     // Server code (Vercel Function) and its unit tests run in Node with web-standard Request/Response
     files: ["api/**/*.mjs", "reports-api.mjs", "tests/**/*.test.mjs"],
-    files: ["api/**/*.mjs", "reports-api.mjs", "machines-api.mjs", "tests/**/*.test.mjs"],
     languageOptions: {
       globals: {
         Buffer: "readonly",
