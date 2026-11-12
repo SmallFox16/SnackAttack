@@ -1,5 +1,4 @@
 import { sortMachinesByDistance } from "./sort-utils.mjs";
-import { parseCSV } from "./csv-utils.mjs";
 
 /* SnackAttack client application. */
 
@@ -425,30 +424,46 @@ locateBtn.addEventListener("click", async () => {
   }
 });
 
+/**
+ * Fetches JSON from one of the SnackAttack API endpoints (Task #4, PBI-38).
+ * Throws with the API's error message when the request fails, so loadData()
+ * shows an error instead of trying to use bad data.
+ *
+ * @param {string} path - API path, e.g. "/api/machines".
+ * @returns {Promise<object>} The parsed JSON body.
+ */
+async function fetchApi(path) {
+  const response = await fetch(path, { cache: "no-store" });
+
+  // A non-JSON error page (e.g. a 404 from a static server) gives an empty body
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok) throw new Error(body.error || `${path} returned HTTP ${response.status}`);
+  return body;
+}
+
+/**
+ * Loads machines and products from the machine API, then draws the page
+ * and starts the simulated sensor.
+ */
 async function loadData() {
   try {
-    const [machineResponse, productResponse] = await Promise.all([
-      fetch("./vending_machines.csv", { cache: "no-store" }),
-      fetch("./products.json", { cache: "no-store" })
+    // Data now comes from the machine API instead of reading the files directly
+    const [machineData, productData] = await Promise.all([
+      fetchApi("/api/machines"),
+      fetchApi("/api/products")
     ]);
 
-    if (!machineResponse.ok) throw new Error(`Machine data HTTP ${machineResponse.status}`);
-    if (!productResponse.ok) throw new Error(`Product data HTTP ${productResponse.status}`);
-
-    const [csv, productData] = await Promise.all([
-      machineResponse.text(),
-      productResponse.json()
-    ]);
-
-    state.machines = parseCSV(csv);
-    state.productsByMachine = normalizeProducts(productData);
+    // The API returns machines already parsed, so no CSV parsing is needed here
+    state.machines = Array.isArray(machineData.machines) ? machineData.machines : [];
+    state.productsByMachine = normalizeProducts(productData); // Same { products: [...] } shape as before
     calculateMachineDistances(); // Covers the case where location was found before data loaded
     updateMachinesByDistance();
     render();
   } catch (error) {
     console.error("Unable to load SnackAttack data:", error);
     summary.textContent = "Unable to load data";
-    machineList.innerHTML = '<div class="error-state">SnackAttack data could not be loaded. Run the site through a web server rather than opening index.html directly.</div>';
+    machineList.innerHTML = '<div class="error-state">SnackAttack data could not be loaded. If running locally, start the site with vercel dev so the API is available.</div>';
   }
 }
 
