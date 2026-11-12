@@ -1,0 +1,66 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  claude-review:
+    # Skip drafts and PRs from forks (fork PRs can't read repo secrets).
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code review
+        uses: anthropics/claude-code-action@v1
+        with:
+          # OAuth token from `claude setup-token` — bills your Claude Pro/Max plan, not the API.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request. Use `gh pr diff` and `gh pr view` to see the changes
+            and the PR description, and read surrounding code in the repo for context.
+
+            1. Code review. Focus on, in order:
+               - Bugs and logic errors
+               - Security issues (secrets, injection, unsafe input handling)
+               - Accessibility problems in UI changes
+               - Performance problems
+               - Readability and consistency with the existing code
+
+            2. Definition of Done. Read `.github/code-review-checklist.md` and check every
+               item that isn't marked (human) against this PR. For example: new logic in
+               *.js / *.mjs without matching tests in `tests/` (or tests with no edge or
+               failure case), console.log/debugger left in, commented-out code, hardcoded
+               test values, secrets, new dependencies or env vars without a README update,
+               or UI/CSS/HTML changes with no screenshot in the PR description.
+
+            Only flag issues introduced by this PR. Be concise and skip praise.
+            Leave inline comments on specific lines with
+            `mcp__github_inline_comment__create_inline_comment`, then post one
+            summary comment with `gh pr comment` containing:
+            - A short list of code-review findings (or "No blocking issues")
+            - A "Definition of Done" section listing every checklist item as
+              ✅ (met), ❌ (not met, with a one-line reason), ➖ (not applicable),
+              or 👤 (human check, for the author/reviewer to confirm)
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Glob,Grep"
