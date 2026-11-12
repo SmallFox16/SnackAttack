@@ -2,29 +2,20 @@ import { test, expect } from "@playwright/test";
 
 const SITE = "http://127.0.0.1:4173";
 
-// Mock API data shaped like the /api/machines response (same fields as the CSV columns)
-const MACHINES = [
-  {
-    ID: "1", Building: "Brinkley", Type: "Drink", Availability: "Unknown",
-    GPS: "36.305545, -82.371430", Payment: "Card", Directions: "", Details: ""
-  },
-  {
-    ID: "2", Building: "Sam Wilson", Type: "Snack", Availability: "Unknown",
-    GPS: "36.303000, -82.370000", Payment: "Cash", Directions: "", Details: ""
-  }
-];
+const MACHINES_CSV = [
+  "ID,Building,Type,Availability,GPS,Payment,Directions,Details",
+  '1,Brinkley,Drink,Unknown,"36.305545, -82.371430",Card,,',
+  '2,Sam Wilson,Snack,Unknown,"36.303000, -82.370000",Cash,,'
+].join("\n");
 
 test.beforeEach(async ({ page }) => {
   // Map tiles come from a live service, so block them to keep tests repeatable
   await page.route("https://tile.openstreetmap.org/**", (route) => route.abort());
-
-  // Products aren't part of these tests, so every test gets an empty product list
-  await page.route("**/api/products", (route) => route.fulfill({ json: { products: [] } }));
 });
 
-test("searching by building narrows the machines loaded from the machine API", async ({ page }) => {
+test("searching by building narrows the machines loaded from the CSV", async ({ page }) => {
   // Arrange
-  await page.route("**/api/machines", (route) => route.fulfill({ json: { machines: MACHINES } }));
+  await page.route("**/vending_machines.csv", (route) => route.fulfill({ body: MACHINES_CSV }));
   await page.goto(SITE);
   await expect(page.locator(".machine-card")).toHaveCount(2);
 
@@ -36,12 +27,9 @@ test("searching by building narrows the machines loaded from the machine API", a
   await expect(page.locator("#summary")).toHaveText("1 of 2 machines shown");
 });
 
-test("an error message appears when the machine API fails", async ({ page }) => {
+test("an error message appears when the machine data fails to load", async ({ page }) => {
   // Arrange
-  await page.route("**/api/machines", (route) => route.fulfill({
-    status: 500,
-    json: { error: "Machine data couldn't be loaded. Please try again later." }
-  }));
+  await page.route("**/vending_machines.csv", (route) => route.fulfill({ status: 500 }));
 
   // Act
   await page.goto(SITE);

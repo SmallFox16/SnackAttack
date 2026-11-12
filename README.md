@@ -161,9 +161,3 @@ npm run quality
 ```
 
 This now runs both ESLint and the Node test suite.
-
-
-
-## Running locally
-
-Run `npm run dev` and open http://localhost:3000. This serves the site and the machine API (`/api/machines`, `/api/products`, `/api/buildings`). Live Server and other static servers can't run the API, so the page won't load machine data with them. Forum reports need Vercel Blob storage and don't work locally.
